@@ -284,9 +284,6 @@
     <ClCompile Include="WindowKatiline.cpp" />
     <ClCompile Include="WindowSplash.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <Image Include="images\development.jpg" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
