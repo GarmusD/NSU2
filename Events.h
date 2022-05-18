@@ -25,8 +25,28 @@ enum Status
 	STATUS_LADOMAT_MANUAL,
 	STATUS_EXHAUSTFAN_OFF,
 	STATUS_EXHAUSTFAN_ON,
-	STATUS_EXHAUST_MANUAL
+	STATUS_EXHAUSTFAN_MANUAL
 };
+
+const char* const cUNKNOWN = "UNKNOWN";
+const char* const cOFF = "OFF";
+const char* const cON = "ON";
+const char* const cMANUAL = "MANUAL";
+const char* const cDISABLED = "DISABLED";
+const char* const cDISABLED_OFF = "DISABLED_OFF";
+const char* const cDISABLED_ON = "DISABLED_ON";
+const char* const cKATILAS_UNKNOWN = "UNKNOWN";
+const char* const cKATILAS_UZGESES = "UZGESES";
+const char* const cKATILAS_IKURIAMAS = "IKURIAMAS";
+const char* const cKATILAS_KURENASI = "KURENASI";
+const char* const cKATILAS_GESTA = "GESTA";
+const char* const cLADOMAT_OFF = "OFF";
+const char* const cLADOMAT_ON = "ON";
+const char* const cLADOMAT_MANUAL = "MANUAL";
+const char* const cEXHAUSTFAN_OFF = "OFF";
+const char* const cEXHAUSTFAN_ON = "ON";
+const char* const cEXHAUSTFAN_MANUAL = "MANUAL";
+const char* const cSHIT = "SHIT";
 
 enum Tags
 {
@@ -50,11 +70,11 @@ public:
 	void RemoveStatusChangeHandler(Events* handler);	
 
 	virtual void HandleTimerEvent(int te_id);
-	virtual void OnTimeSlice();
+	virtual void OnTimeSlice(void);
 
-	virtual void CleanUp();
+	virtual void Reset(void);
 
-	static String GetStatusName(Status value);
+	static const char* GetStatusName(Status value);
 protected:
 	void DispatchTemperature(void* Sender, float t);
 	void DispatchOnClick(void* Sender, int x, int y, int tag);

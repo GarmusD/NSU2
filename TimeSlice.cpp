@@ -10,6 +10,11 @@ CTimeSlice::~CTimeSlice(void)
 {
 }
 
+void CTimeSlice::Reset()
+{
+	slices.Clear();
+}
+
 void CTimeSlice::RegisterTimeSlice(Events* value)
 {
 	int idx = slices.FindFree();

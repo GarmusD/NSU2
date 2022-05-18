@@ -1,7 +1,7 @@
 #ifndef TimeSlice_h
 #define TimeSlice_h
 
-#include "StaticList.h"
+#include "StaticListP.h"
 #include "Events.h"
 
 class CTimeSlice
@@ -12,8 +12,9 @@ public:
 	void RegisterTimeSlice(Events* value);
 	void UnRegisterTimeSlice(Events* value);
 	void TimeSlice();
+	void Reset();
 private:
-	StaticList<64, Events*> slices;
+	StaticListP<64, Events*> slices;
 	void DispatchTimeSlice();
 };
 

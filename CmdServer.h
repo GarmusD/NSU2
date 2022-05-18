@@ -17,8 +17,8 @@ public:
 	~CmdServer(void);
 	void begin();
 	void ParseMessage();
-	void ParseJsonMessage(String& json);
-	//void PrintJSON(JsonObject& jo);
+	void ParseJsonMessage(const char* json);
+	//void PrintJSON(JsonObject jo);
 	void OnTimeSlice();
 	CmdMessenger & getCmdMessenger();
 private:

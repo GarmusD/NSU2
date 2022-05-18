@@ -2,18 +2,52 @@
 #include "TSensors.h"
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include "SystemStatus.h"
+#include "FileManager.h"
+
+
+const int CTempSensors::CURRENT_CONFIG_VERSION = 2;
+const VersionInfo CTempSensors::VINFO = { 'T', 'S', 'N', CURRENT_CONFIG_VERSION };
+const char* CTempSensors::CFG_FILE = "tempsens.cfg";
+
 
 /*********************************************
 *********************************************/
 /*********************************************
 *********************************************/
+bool TempSensor::StringToAddr(const char* saddr, uint8_t * addr)
+{
+	char s[MAX_NAME_LENGTH];
+	char* p = s;
+	for (uint8_t i = 0; i < MAX_NAME_LENGTH; i++) s[i] = 0;
+	stpncpy(p, saddr, MAX_NAME_LENGTH - 1);
+	char* str;
+	uint8_t counter = 0;
+	for (uint8_t i = 0; i < 8; i++) 
+	{
+		if ((str = strtok_r(p, ":", &p)) != NULL) 
+		{
+			counter++;
+			addr[i] = strtol(str, NULL, 16);
+		}
+	}
+	if (counter == 0)
+		return true;
+	return false;
+}
 
 TempSensor::TempSensor()
 {
+	Reset();
+}
+
+void TempSensor::Reset()
+{
+	Events::Reset();
+	errors = 0;
 	status = TR_DONE;
 	enabled = false;
 	currtemp = -127.0;
-	repeat_count = 0;
 	readcount = 0;
 	interval = readinterval = 180000;//3 min
 	lastread = INT32_MIN;
@@ -25,16 +59,23 @@ TempSensor::TempSensor()
 	}
 }
 
+void TempSensor::ApplyConfig(uint8_t cfgPos, const TSensorData & data)
+{
+	configPos = cfgPos;
+	enabled = true;
+	setName(data.sid.name);
+	SetInterval(data.interval);
+}
+
 void TempSensor::SetAddress(const uint8_t* addr)
 {
 	for (int i = 0; i < 8; i++)
 	{
-		//saddr += String(addr[i], HEX); if (i < 7) saddr += ", ";
 		sid.addr[i] = addr[i];
 	}
-	char saddr[MAX_SENSOR_NAME];
-	sprintf(saddr, "%02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
-	Log.debug("Added sensors addr: " + String(saddr));
+	char s[64];
+	sprintf(s, "Added sensors addr: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
+	Log.debug(s);
 }
 
 void TempSensor::SetDallas(DallasTemperature* dtemp)
@@ -62,11 +103,6 @@ uint32_t TempSensor::GetInterval() {
 	return interval / 1000;
 }
 
-//String TempSensor::getName()
-//{
-//	return String(sid.name);
-//}
-
 const char* TempSensor::getName()
 {
 	return sid.name;
@@ -89,7 +125,12 @@ uint8_t* TempSensor::getAddr()
 
 void TempSensor::setName(const char* name)
 {
-	strncpy(sid.name, name, MAX_SENSOR_NAME);
+	strncpy(sid.name, name, MAX_NAME_LENGTH);
+}
+
+unsigned int TempSensor::getErrorCount()
+{
+	return errors;
 }
 
 float TempSensor::pround(float x)
@@ -125,39 +166,28 @@ TempReadStatus TempSensor::readTemp(uint32_t t, bool forceread)
 {
 	if (!forceread)
 		if (!enabled) return TR_DONE;
-	//Serial.print("t - "); Serial.print(t);
-	//Serial.print(", lastread - "); Serial.print(lastread);
-	//Serial.print(". Abs(t - lastread): "); Serial.println(abs(t-lastread));
+	
 	if (abs(t - lastread) >= readinterval && status != TR_WAIT)
-	{//time to read
+	{   //time to read
 		lastread = t;
 		//request real read
 		dt->requestTemperaturesByAddress(sid.addr);
 		status = TR_WAIT;
 	}
-	else if (status == TR_WAIT && abs(t - lastread) > 2000)//Uzstrigom - pakartokim
-	{
-		lastread = millis();
-		repeat_count++;
-		if (repeat_count < 4) {
-			//request real read
-			Log.error("Uzstrigo temp " + getSensorNameAddr() + " nuskaitymas - pakartojam.");
-			delay(1000);
-			dt->requestTemperaturesByAddress(sid.addr);
-			status = TR_WAIT;
-		}
-		else {
-			Log.error("Tsensor: " + getSensorNameAddr() + " pakartojom 3 kartus. Grazinam sena reiksme " + String(currtemp));
-			repeat_count = 0;
-			lastdispatch = t;
+	else if (status == TR_WAIT && abs(t - lastread) > 1000)//Uzstrigom - pakartokim
+	{			
+			errors++;
+			lastread = t;
 			status = TR_DONE;
-		}
+			char s[128];
+			snprintf(s, 128, "Tsensor [%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X %s] nenuskaitomas. Klaidu skaicius: %d", 
+							sid.addr[0], sid.addr[1], sid.addr[2], sid.addr[3], sid.addr[4], sid.addr[5], sid.addr[6], sid.addr[7], sid.name, errors);
+			Log.error(s);
 	}
-	else if (status == TR_WAIT && abs(t - lastread) > 150)
+	else if (status == TR_WAIT && abs(t - lastread) > 200)
 	{
 		if (dt->isConversionAvailable(sid.addr))
 		{
-			repeat_count = 0;
 			float tempC = dt->getTempC(sid.addr);
 
 			if (forceread)
@@ -170,7 +200,10 @@ TempReadStatus TempSensor::readTemp(uint32_t t, bool forceread)
 			if (Utilities::nearEqual(tempC, -127.0))
 			{
 				tempC = currtemp;
-				Log.debug("TSensor " + getSensorNameAddr() + " grazino -127.0 Atduodam sena temp: " + String(currtemp));
+				char s[128];
+				snprintf(s, 128, "Tsensor [%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X %s] grazino -127.0 Atiduodam sena temp: %.1f",
+					sid.addr[0], sid.addr[1], sid.addr[2], sid.addr[3], sid.addr[4], sid.addr[5], sid.addr[6], sid.addr[7], sid.name, currtemp);
+				Log.debug(s);
 				status = TR_DONE;
 				return status;
 			}
@@ -193,23 +226,9 @@ TempReadStatus TempSensor::readTemp(uint32_t t, bool forceread)
 	return status;
 }
 
-String TempSensor::getSensorAddr()
+int TempSensor::getSensorAddr(char * buff, int size)
 {
-	String result = "";
-	for (byte i = 0; i < 8; i++) {
-		if (i > 0) result += ":";
-		result += String(sid.addr[i], HEX);
-	}
-	return result;
-}
-
-String TempSensor::getSensorNameAddr() {
-
-	String name = String(sid.name);
-	if (name == "") {
-		name = "N";
-	}
-	return getSensorAddr() + " " + name;
+	return snprintf(buff, size, "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X", sid.addr[0], sid.addr[1], sid.addr[2], sid.addr[3], sid.addr[4], sid.addr[5], sid.addr[6], sid.addr[7]);
 }
 
 void TempSensor::reset()
@@ -217,30 +236,26 @@ void TempSensor::reset()
 	lastread = -360000000;
 }
 
-void TempSensor::SetResolution(byte res)
+void TempSensor::SetResolution(uint8_t res)
 {
 	dt->setResolution(sid.addr, res);
 }
 
-String TempSensor::GetSensorNameAddr(SensorID * sid)
+int TempSensor::GetSensorNameAddr(SensorID* sid, char* buff, uint32_t buff_size)
 {
-	String name = String(sid->name);
-	if (name == "") 
-	{
-		name = "N";
-	}
-
-	String result = "";
-	for (byte i = 0; i < 8; i++) {
-		if (i > 0) result += ":";
-		result += String(sid->addr[i], HEX);
-	}
-
-	return "[" + result + " " + name+"]";
+	return snprintf(buff, buff_size, "[%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X %s]", sid->addr[0], sid->addr[1], sid->addr[2], sid->addr[3], sid->addr[4], sid->addr[5], sid->addr[6], sid->addr[7], sid->name);
 }
+
+void TempSensor::Simulate(float value)
+{
+	DispatchTemperature(this, value);
+}
+
+
+
 /*********************************************
 *********************************************/
-CTempSensors::CTempSensors(byte wire, byte testwire):onewire(wire), dallas(&onewire)
+CTempSensors::CTempSensors(uint8_t wire, uint8_t testwire):onewire(wire), dallas(&onewire)
 {
 	count = 0;
 	idx = 0;
@@ -250,22 +265,33 @@ CTempSensors::CTempSensors(byte wire, byte testwire):onewire(wire), dallas(&onew
 
 void CTempSensors::Begin()
 {
-	dallas.begin(false);
+	dallas.begin();
 	dallas.setWaitForConversion(false);
 	TimeSlice.RegisterTimeSlice(this);
 }
 
-TempSensor* CTempSensors::getByAddr(uint8_t* addr)
+void CTempSensors::Reset()
+{
+	sensors.Clear();
+	count = 0;
+	idx = 0;
+	cidx = 0;
+	resolution = 9;
+	initialread = false;
+	Events::Reset();
+}
+
+TempSensor* CTempSensors::getByAddr(const uint8_t* addr)
 {
 	uint8_t* da;
-	for (byte i = 0; i < count; i++) 
+	for (uint8_t i = 0; i < count; i++) 
 	{
 		TempSensor* ts = sensors[i];
 		if (ts)
 		{
 			da = ts->getAddr();
 			bool found = true;
-			for (byte j = 0; j < 8; j++) 
+			for (uint8_t j = 0; j < 8; j++) 
 			{
 				if (addr[j] != da[j]) 
 				{
@@ -288,7 +314,7 @@ TempSensor* CTempSensors::getByAddr(uint8_t* addr)
 
 TempSensor* CTempSensors::getByName(const char* name)
 {
-	for (byte i = 0; i < count; i++) 
+	for (uint8_t i = 0; i < count; i++) 
 	{
 		TempSensor* ts = sensors[i];
 		if (ts)
@@ -320,7 +346,7 @@ TempSensor* CTempSensors::getByIndex(int idx)
 bool CTempSensors::ScanSensors()
 {
 	DeviceAddress addr;
-	if (dallas.startupSearch(addr))
+	if (dallas.getAddress(addr, count))
 	{
 		SensorFounded(addr);
 		//delay(100);
@@ -329,7 +355,7 @@ bool CTempSensors::ScanSensors()
 	return false;
 }
 
-byte CTempSensors::getSensorCount()
+uint8_t CTempSensors::getSensorCount()
 {
 	return count;
 }
@@ -344,9 +370,6 @@ void CTempSensors::SensorFounded(uint8_t* da)
 		ts->SetDallas(&dallas);
 		ts->SetResolution(resolution);
 		ts->AddTempChangeHandler(this);
-		//sensors[count - 1] = new TempSensor(da, dallas);
-		//sensors[count - 1]->SetResolution(resolution);
-		//sensors[count - 1]->AddTempChangeHandler(this);
 	}
 }
 
@@ -369,12 +392,15 @@ void CTempSensors::InitialReadAllTemperatures()
 					case TR_DONE:
 						done = true;
 						//delay(100);
-						Log.debug("Initial read. Sensor " + String(i) + " temp: " + String(ts->getTemp()));
+						char s[64];
+						sprintf(s, "Initial read. Sensor %d temp: %.1f", i, ts->getTemp());
+						Log.debug(s);
 						break;
 					case TR_ERROR:
 						done = true;
 						//delay(100);
-						Log.debug("Error reading sensor " + String(i));
+						sprintf(s, "Error reading sensor %d", i);
+						Log.debug(s);
 						//do something with error
 						break;
 					case TR_WAIT:
@@ -409,11 +435,15 @@ void CTempSensors::OnTimeSlice()// ReadTemperatures(uint32_t t)
 		{
 			cidx++;
 			if (cidx >= count) cidx = 0;
-			delay(200);
+			//delay(200);
 		}
 		else if (trs == TR_ERROR) //error reading temp
 		{
-			Log.error("TempSensor read error. Sensor: " + sensors[cidx]->getSensorAddr() + " - " + String(sensors[cidx]->getName()));
+			char sa[64];
+			char s[128];
+			sensors[cidx]->getSensorAddr(sa, 64);
+			sprintf(s, "TempSensor read error. Sensor: %s - %s", sa, sensors[cidx]->getName());
+			Log.error(s);
 		}
 		else if (trs == TR_WAIT)
 		{
@@ -421,7 +451,7 @@ void CTempSensors::OnTimeSlice()// ReadTemperatures(uint32_t t)
 	}
 }
 
-void CTempSensors::SetResolution(byte res)
+void CTempSensors::SetResolution(uint8_t res)
 {
 	resolution = constrain(res, 9, 12);
 }
@@ -431,16 +461,189 @@ void CTempSensors::HandleTemperatureChange(void* Sender, float t)
 	if (initialread)
 		return;
 	if (!Utilities::nearEqual(t, -127.0))
-	{
-		StaticJsonBuffer<200> jbuff;
-		JsonObject& root = jbuff.createObject();
+	{		
+		DynamicJsonDocument	jbuff(512);
+		JsonObject root = jbuff.to<JsonObject>();
 		TempSensor* ts = (TempSensor*)Sender;
+		char saddr[32];
+		ts->getSensorAddr(saddr, 32);
 
-		root[jKeyTarget] = jTargetTSensor;
+		root[jKeyTarget] = jKeyTargetTSensor;
 		root[jKeyAction] = jValueInfo;
-		root[jKeyAddr] = ts->getSensorAddr();
+		root[jKeyTSensorAddr] = saddr;
 		root[jKeyValue] = t;
+		root[jKeyTSensorErrorCount] = ts->getErrorCount();
 		PrintJson.Print(root);
+	}
+}
+
+void CTempSensors::LoadConfig(void)
+{
+	switch (FileManager.OpenConfigFile(CFG_FILE, VINFO))
+	{
+	case FileStatus_OK:
+		for (size_t i = 0; i < MAX_SENSOR_COUNT; i++)
+		{
+			TSensorData data;
+			if (FileManager.FileReadBuffer(&data, sizeof(data)))
+			{
+				if (data.Valid)
+				{
+					TempSensor* ts = getByAddr(data.sid.addr);
+					if (ts)
+					{
+						ts->ApplyConfig(i, data);
+					}
+				}
+			}
+			else
+			{
+				//Read error
+				char s[64];
+				sprintf(s, "TSensor config file read error. Pos: %d", i);
+				Log.error(s);
+			}
+		}
+		FileManager.FileClose();
+		break;	
+	case FileStatus_ReCreate:
+		//FilePos at end of header
+		Log.error("Writing defaults...");
+		for (size_t i = 0; i < MAX_SENSOR_COUNT; i++)
+		{
+			const TSensorData& data = Defaults.GetDefaultTSensorData(i);
+			if (FileManager.FileWriteBuff(&data, sizeof(data)))
+			{
+				if (data.Valid)
+				{
+					TempSensor* ts = getByAddr(data.sid.addr);
+					if (ts)
+					{
+						ts->ApplyConfig(i, data);
+					}
+				}
+			}
+			else
+			{
+				char s[64];
+				sprintf(s, "TSensor config file write defaults error. Pos: %d", i);
+				Log.error(s);
+			}
+		}
+		FileManager.FileClose();
+		break;
+	case FileStatus_RWError:
+	case FileStatus_Inaccessible:
+		Log.error("SD inaccessible or Read/Write error. Reading defaults...");
+		for (size_t i = 0; i < MAX_SENSOR_COUNT; i++)
+		{
+			const TSensorData& data = Defaults.GetDefaultTSensorData(i);
+			if (data.Valid)
+			{
+				TempSensor* ts = getByAddr(data.sid.addr);
+				if (ts)
+				{
+					ts->ApplyConfig(i, data);
+				}
+			}
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+bool CTempSensors::GetConfigData(uint8_t cfgPos, TSensorData & data)
+{
+	if (FileManager.OpenConfigFile(CFG_FILE, VINFO) == FileStatus_OK)
+	{
+		uint32_t fpos = sizeof(VersionInfo) + cfgPos * sizeof(TSensorData);
+		if (FileManager.FileSeek(fpos))
+		{
+			if (FileManager.FileReadBuffer(&data, sizeof(data)))
+			{
+				FileManager.FileClose();
+				return true;
+			}
+		}
+		FileManager.FileClose();
+	}
+	return false;
+}
+
+bool CTempSensors::ValidateSetupDataSet(ArduinoJson::JsonObject & jo)
+{
+	if (!jo.containsKey(jKeyEnabled) ||
+		!jo.containsKey(jKeyName) ||
+		!jo.containsKey(jKeyTSensorAddr) ||
+		!jo.containsKey(jKeyTSensorInterval) ||
+		!jo.containsKey(jKeyConfigPos)
+		)
+	{
+		//return error
+		PrintJson.PrintResultError(jKeyTargetTSensor, jErrorInvalidDataSet);
+		return false;
+	}
+	return true;
+}
+
+void CTempSensors::ParseJSON(JsonObject & jo)
+{
+	if (jo.containsKey(jKeyAction))
+	{
+		const char * action = jo[jKeyAction];
+		if (strcmp(action, jKeySetup) == 0)
+		{
+			if (ValidateSetupDataSet(jo))
+			{
+				TSensorData data;
+				const char* sa = jo[jKeyTSensorAddr];
+				bool res = TempSensor::StringToAddr(sa, data.sid.addr);
+				if (!res)
+				{
+					PrintJson.PrintResultError(jKeyTargetTSensor, "invalid_address");
+					return;
+				}
+				data.Valid = jo[jKeyEnabled];
+				Utilities::ClearAndCopyString(jo[jKeyName], data.sid.name);
+				data.interval = jo[jKeyTSensorInterval];
+
+				//Write settings
+				uint8_t cfgPos = jo[jKeyConfigPos];
+				if (FileManager.OpenConfigFile(CFG_FILE, VINFO) == FileStatus_OK)
+				{
+					if (FileManager.FileSeek(sizeof(VersionInfo) + cfgPos * sizeof(TSensorData)))
+					{
+						if (FileManager.FileWriteBuff(&data, sizeof(TSensorData)))
+						{
+							FileManager.FileClose();
+							SystemStatus.SetRebootRequired();
+							PrintJson.PrintResultOk(jKeyTargetTSensor, jKeySetup, true);
+							return;
+						}
+					}
+				}
+				PrintJson.PrintResultError(jKeyTargetTSensor, jErrorFileOpenError);				
+			}
+		}
+		else if (strcmp(action, "simulate") == 0)
+		{
+			const char * name = jo[jKeyName];
+			float val = jo[jKeyValue];
+			TempSensor* ts = getByName(name);
+			if (ts)
+			{
+				ts->Simulate(val);
+			}
+		}
+		else
+		{
+			PrintJson.PrintResultUnknownAction(jKeyTargetTSensor, action);
+		}
+	}
+	else
+	{
+		PrintJson.PrintResultFormatError();
 	}
 }
 

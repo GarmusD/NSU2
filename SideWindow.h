@@ -6,6 +6,7 @@
 #include "UI.h"
 #include "List.h"
 #include "graphics.h"
+#include "Window.h"
 
 const int BTN_SPACE = 5;
 
@@ -18,14 +19,17 @@ const int BTN_SPACE = 5;
 class SideWindow : public CWindow
 {
 public:
-	SideWindow(Rect windowarea, UTFT& utft, Scenario& Sc, byte* sc_buf);
+	SideWindow(/*Rect windowarea, */UTFT& utft, Scenario& Sc, uint8_t* sc_buf);
 	~SideWindow(void);
 
 	void AddButton(UIImgButton* btn);
-
-	//void TimeEvent(uint32_t t);
+	void Begin(Rect& area);
 private:
-	TimeWidget* timewidget;
+	TimeWidget timewidget;
+	UISwitchButton btnOpMode;
+	UISwitchButton btnTempMode;
+	UISwitchButton btnKarstasVanduo;
+
 	List<UIImgButton> buttons;
 };
 

@@ -108,7 +108,7 @@ int StaticList<C, T>::FindFree(void)
 	{
 		if (elements[i].isNull)
 		{
-			elements[i].isNull = false;
+			//elements[i].isNull = false;
 			return i;
 		}
 	}
@@ -155,10 +155,11 @@ void StaticList<C, T>::Clear()
 {
 	for (int i = 0; i < C; i++)
 	{
-		elements[i].item.CleanUp();
-		delete elements[i].item;
-		elements[i].item = new T();
-		elements[i].isNull = true;
+		if (!elements[i].isNull)
+		{
+			elements[i].item.Reset();
+			elements[i].isNull = true;
+		}
 	}
 }
 

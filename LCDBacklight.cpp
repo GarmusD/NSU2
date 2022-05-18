@@ -35,7 +35,7 @@ LCDBacklight::~LCDBacklight(void)
 {
 }
 
-void LCDBacklight::SetBLValue(byte value)
+void LCDBacklight::SetBLValue(uint8_t value)
 {
 	switch (disp_model)
 	{
@@ -53,41 +53,51 @@ void LCDBacklight::SetBLValue(byte value)
 
 void LCDBacklight::TimeEvent(uint32_t t)
 {
-	if(inTransition){
+	if(inTransition)
+	{
 		unsigned long diff = millis() - transition_start;
-		byte br_value;
-		if(lightIsOn){
+		uint8_t br_value;
+		if(lightIsOn)
+		{
 			current_pwm = max_value - (increment * diff);
-			if(current_pwm <= min_value){ 
+			if(current_pwm <= min_value)
+			{
 				current_pwm = min_value;
 				inTransition = false;
 				lightIsOn = false;
 			}
 			//analogWrite(LCDBacklightPin, floor(current_pwm + 0.5));
-			br_value = (byte)floor(current_pwm + 0.5);
+			br_value = (uint8_t)floor(current_pwm + 0.5);
 			if(last_value != br_value){
 				SetBLValue(br_value);
 				last_value = br_value;
-				//Log.debug("LCDTransition value: "+String(br_value));
 			}
-		}else{
+		}
+		else
+		{
 			current_pwm = min_value + (increment * diff);
-			if(current_pwm >= max_value) {
+			if(current_pwm >= max_value) 
+			{
 				current_pwm = max_value;
 				inTransition = false;
 				lightIsOn = true;
 			}
 			//analogWrite(LCDBacklightPin, floor(current_pwm + 0.5));
-			br_value = (byte)floor(current_pwm + 0.5);
-			if(last_value != br_value){
+			br_value = (uint8_t)floor(current_pwm + 0.5);
+			if(last_value != br_value)
+			{
 				SetBLValue(br_value);
 				last_value = br_value;
-				//Log.debug("LCDTransition value: "+String(br_value));
 			}
 		}
-	}else if(lightIsOn){
-		if((millis() - last_click) > (LCDWaitTime) && !inTransition){
-			Log.debug("Changing LCD transaction... Increment: "+String(increment));
+	}
+	else if(lightIsOn)
+	{
+		if((millis() - last_click) > (LCDWaitTime) && !inTransition)
+		{
+			char s[128];
+			sprintf(s, "Changing LCD transaction... Increment: %.3f", increment);
+			Log.debug(s);
 			inTransition = true;
 			transition_start = millis();
 		}

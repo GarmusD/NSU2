@@ -11,7 +11,7 @@ public:
 	TouchInput(UTFT &_tft, UTouch &utouch);
 	~TouchInput(void);
 	bool MsgAvailable();
-	Msg GetMessage();
+	const Msg& GetMessage();
 	void ForceLCDBacklight();
 private:
 	MsgType lastmsgtype, msgtype;
@@ -20,7 +20,7 @@ private:
 	UTouch &touch;
 	LCDBacklight backlight;
 	unsigned long int last_touch;
-	byte tft_model;
+	uint8_t tft_model;
 	int tft_width;
 };
 

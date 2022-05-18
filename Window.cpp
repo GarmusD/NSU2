@@ -2,32 +2,49 @@
 
 /*********************************************
 *********************************************/
-CWindow::CWindow(Rect windowarea, UTFT& utft, Scenario& Sc, byte* scbuf) :tft(utft), scenario(Sc)
+CWindow::CWindow(/*Rect windowarea, */UTFT& utft, Scenario& Sc, uint8_t* scbuf) :tft(utft), scenario(Sc)
 {
 	//tft = utft;
 	//tft = cte->_UTFT;
 	//_scenario = Sc;
 	sc_buf = scbuf;
-	windowArea = windowarea;
-	setClientArea();
+	windowArea.Bottom = 0;
+	windowArea.Left = 0;
+	windowArea.Right = 0;
+	windowArea.Top = 0;
+
+	clientArea.Bottom = 0;
+	clientArea.Left = 0;
+	clientArea.Right = 0;
+	clientArea.Top = 0;
+	
 	clr = WindowBackgroudColor;
 	bclr = WindowBorderColor;
-	mresult = MR_NO_RESULT;
 	window_drawn = false;
 }
 
 CWindow::~CWindow(void)
 {
+	char s[64];
 	while (uielements.Count() > 0)
 	{
-		Serial.println("DBG: ~Window. UIElements count: " + String(uielements.Count()));
+		sprintf(s, "0 DBG: ~Window(). UIElements count: %d", uielements.Count());
+		Serial.println(s);
 		UIBase* uielem = uielements.Get(0);
 		delete uielem;
-		//Serial.println("DBG: ~Window. UIElement deleted");
-		uielements.Delete(0);
-		//Serial.println("DBG: ~Window. Deleted from list.");
+		uielements.Delete((uint8_t)0);
 	}
-	//Serial.println("DBG: ~Window. Done");
+	uielements.Clear();
+}
+
+void CWindow::Begin()
+{
+}
+
+void CWindow::Reset(void)
+{
+	active = false;
+	window_drawn = false;
 }
 
 void CWindow::Message(Msg msg)
@@ -47,6 +64,18 @@ void CWindow::TimeEvent(uint32_t t)
 		uielem->TimeEvent(t);
 	}
 }
+bool CWindow::IsActive(void)
+{
+	return active;
+}
+void CWindow::SetWindowArea(Rect & r)
+{
+	windowArea.Top = r.Top;
+	windowArea.Left = r.Left;
+	windowArea.Bottom = r.Bottom;
+	windowArea.Right = r.Right;
+	setClientArea();
+}
 //TODO - prideti elementus pagal eiliskuma, piesti pagal eiliskuma, msg sukti atbuline tvarka
 void CWindow::AddUIElement(UIBase* element)
 {
@@ -58,7 +87,7 @@ UIBase* CWindow::GetUIElement(UIID* id)
 	for (int i = 0; i < uielements.Count(); i++)
 	{
 		UIBase* uielem = uielements.Get(i);
-		if (String((char*)uielem->getUIID()).compareTo(String((char*)id)))
+		if (strcmp((char*)uielem->getUIID(), (char*)id) == 0)
 		{
 			return uielem;
 		}
@@ -68,23 +97,19 @@ UIBase* CWindow::GetUIElement(UIID* id)
 
 void CWindow::Draw()
 {
-	Log.debug("CWindow::Draw()");
+	active = true;
 	tft.setColor(clr.R, clr.G, clr.B);
-	Log.debug("2");
 	tft.fillRoundRect(windowArea.Left, windowArea.Top, windowArea.Right, windowArea.Bottom);
-	Log.debug("3");
 	tft.setColor(bclr.R, bclr.G, bclr.B);
-	Log.debug("4");
 	tft.drawRoundRect(windowArea.Left, windowArea.Top, windowArea.Right, windowArea.Bottom);
-	Log.debug("5");
 	tft.drawRoundRect(windowArea.Left + 2, windowArea.Top + 2, windowArea.Right - 2, windowArea.Bottom - 2);
-	Log.debug("Uchhh :)");
 	//draw scenario
-	Log.debug("CWindow::Draw() PlayScenario()");
 	if (sc_buf != NULL) scenario.PlayScenario(clientArea.Left, clientArea.Top, sc_buf);
 	//draw Graphics components
+	char s[64];
+	sprintf(s, "CWindow::Draw() - UIElements: %d", uielements.Count());
+	Log.debug(s);
 	//draw UI components
-	Log.debug("UIElements count: "+String(uielements.Count()));
 	for (int i = 0; i < uielements.Count(); i++)
 	{
 		UIBase* uielem = uielements.Get(i);
@@ -97,7 +122,6 @@ void CWindow::Draw()
 		}
 	}
 	window_drawn = true;
-	Log.debug("Draw DONE :)");
 }
 
 void CWindow::Invalidate()
@@ -109,75 +133,22 @@ void CWindow::Invalidate()
 
 void CWindow::DisableWindow()
 {
-	for (int i = 0; i < uielements.Count(); i++)
-	{
-		UIBase* uielem = uielements.Get(i);
-		uielem->DisableDrawing(true);
-	}
+	active = false;
+	//for (int i = 0; i < uielements.Count(); i++)
+	//{
+	//	UIBase* uielem = uielements.Get(i);
+	//	uielem->DisableDrawing(true);
+	//}
 }
 
 void CWindow::EnableWindow()
 {
-	for (int i = 0; i < uielements.Count(); i++)
-	{
-		UIBase* uielem = uielements.Get(i);
-		uielem->DisableDrawing(false);
-	}
-}
-
-void CWindow::DrawArea(Rect area)
-{
-	tft.setColor(clr.R, clr.G, clr.B);
-	tft.fillRect(area.Left, area.Top, area.Right, area.Bottom);
-	tft.setColor(bclr.R, bclr.G, bclr.B);
-	//draw scenario
-	if (sc_buf != NULL) scenario.PlayScenario(clientArea.Left, clientArea.Top, area, sc_buf);
-	//draw Graphics components
-	//draw UI components
-	for (int i = 0; i < uielements.Count(); i++)
-	{
-		UIBase* uielem = uielements.Get(i);
-		if (UIInRect(uielem, area))
-		{
-			uielem->Invalidate();
-		}
-	}
-}
-
-bool CWindow::UIInRect(UIBase* elem, Rect r)
-{
-	int ex, ey, ew, eh;
-	elem->GetPosition(ex, ey);
-	elem->GetSize(ew, eh);
-
-	int left1, left2;
-	int right1, right2;
-	int top1, top2;
-	int bottom1, bottom2;
-
-	ex += windowArea.Left;
-	ey += windowArea.Top;
-
-	left1 = ex;
-	left2 = r.Left;
-
-	right1 = ex + ew;
-	right2 = r.Right;
-
-	top1 = ey;
-	top2 = r.Top;
-
-	bottom1 = ey + eh;
-	bottom2 = r.Bottom;
-
-	return !(
-		(bottom1 < top2) | (top1 > bottom2) | (right1 < left2) | (left1 > right2)
-		);
-}
-
-bool CWindow::PointInRect(int x, int y, Rect r)
-{
-	return x >= r.Left && x <= r.Right && y >= r.Top && y <= r.Bottom;
+	active = true;
+	//for (int i = 0; i < uielements.Count(); i++)
+	//{
+	//	UIBase* uielem = uielements.Get(i);
+	//	uielem->DisableDrawing(false);
+	//}
 }
 
 void CWindow::setClientArea()
@@ -208,7 +179,7 @@ void CWindow::SetBorderColor(RGBColor clr)
 	this->bclr = clr;
 }
 
-void CWindow::PlayScenario(int x, int y, byte* buf)
+void CWindow::PlayScenario(int x, int y, uint8_t* buf)
 {
 	scenario.PlayScenario(x, y, buf);
 }
@@ -221,21 +192,4 @@ Scenario& CWindow::getScenario()
 UTFT& CWindow::GetUTFT()
 {
 	return tft;
-}
-
-/*
-UTFT_CTE* Window::GetUTFT_CTE()
-{
-return cte;
-}
-*/
-
-ModalResult CWindow::IsSetModalResult()
-{
-	return mresult;
-}
-
-char* CWindow::GetModalResult()
-{
-	return 0;
 }

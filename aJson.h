@@ -9,6 +9,7 @@ const int JsonBuffSize = 2048;
 
 //general keys
 const char* const jKeyTarget = "target";// "trg";
+const char* const jKeyName = "name";
 const char* const jKeyAction = "action";// "act";
 const char* const jKeyContent = "content";
 const char* const jKeyResult = "result";
@@ -16,6 +17,7 @@ const char* const jKeyMessage = "message";//"msg";
 const char* const jKeyStatus = "status";
 const char* const jKeyEnabled = "enabled";
 const char* const jKeySetup = "setup";
+const char* const jKeyUpdate = "update";
 
 const char* const jKeyCmdID = "cmdid";
 const char* const jKeyConfigPos = "cfgpos";
@@ -26,14 +28,16 @@ const char* const jTargetBoot = "boot";
 
 //system
 const char* const jTargetSystem = "system";
-const char* const jSysStatusReadyPauseBoot = "readypauseboot";
-const char* const jSysStatusBooting = "booting";
-const char* const jSysStatusBootPaused = "bootpaused";
-const char* const jSysStatusRunning = "running";
-const char* const jSystemActionPauseBoot = "pauseboot";
-const char* const jSystemActionSystemStatus = "systemstatus";
-const char* const jSystemActionSnapshot = "snapshot";
-const char* const jSystemActionSystemReady = "systemready";
+const char* const jKeySysStatusReadyPauseBoot = "readypauseboot";
+const char* const jKeySysStatusBooting = "booting";
+const char* const jKeySysStatusBootPaused = "bootpaused";
+const char* const jKeySysStatusRunning = "running";
+const char* const jKeySysStatusRebootRequired = "rebootreq";
+const char* const jKeySystemActionReboot = "reboot";
+const char* const jKeySystemActionPauseBoot = "pauseboot";
+const char* const jKeySystemActionSystemStatus = "systemstatus";
+const char* const jKeySystemActionSnapshot = "snapshot";
+const char* const jKeySystemActionSystemReady = "systemready";
 const char* const jKeySysStatusFreeMem = "freemem";
 const char* const jKeySysStatusUpTime = "uptime";
 const char* const jKeySysStatusActionSetTime = "settime";
@@ -46,6 +50,14 @@ const char* const jKeySysStatusSecond = "s";
 //const char* const jKeySysStatus
 
 
+//Alarm
+const char* const jTargetAlarm = "alarm";
+const char* const jAlarmTemp = "temp";
+const char* const jAlarmHisteresis = "hist";
+const char* const jAlarmChannelData = "chdata";
+const char* const jAlarmChannel = "ch";
+const char* const jAlarmOpen = "open";
+
 //FileManager
 const char* const jTargetFileManager = "fileman";
 //const char* const jFileManActionRead = "read";
@@ -54,10 +66,10 @@ const char* const jFileManFileName = "fname";
 const char* const jFileManData = "data";
 
 //tsensor
-const char* const jTargetTSensor = "tsensor";
-const char* const jKeyName = "name";
-const char* const jKeyAddr = "addr";
-const char* const jKeyInterval = "interval";
+const char* const jKeyTargetTSensor = "tsensor";
+const char* const jKeyTSensorAddr = "addr";
+const char* const jKeyTSensorInterval = "interval";
+const char* const jKeyTSensorErrorCount = "errors";
 
 //switch
 const char* const jTargetSwitch = "switch";
@@ -72,9 +84,13 @@ const char* const jSwitchClick = "click";
 const char* const jTargetRelay = "relay";
 const char* const jRelayActionOpenChannel = "open";
 const char* const jRelayActionCloseChannel = "close";
+const char* const jRelayActionLockChannel = "lock";
+const char* const jRelayActionUnlockChannel = "unlock";
 const char* const jRelayActiveLow = "activelow";
 const char* const jRelayInverted = "inverted";
 const char* const jRelayFlags = "flags";
+const char* const jRelayChannelLocked = "locked";
+const char* const jRelayChannel = "ch";
 
 //TempTriggers
 const char* const jTargetTempTrigger = "trigger";
@@ -109,7 +125,7 @@ const char* const jCollectorValveChannel = "ch";
 const char* const jTargetComfortZone = "czone";
 const char* const jCZoneTitle = "title";
 const char* const jCZoneCollectorName = "clname";
-const char* const jCZoneChannel = "ch";
+const char* const jCZoneActuator = "act";
 const char* const jCZoneHisterezis = "hist";
 const char* const jCZoneRoomSensorName = "rsname";
 const char* const jCZoneRoomTempHigh = "rth";
@@ -119,7 +135,8 @@ const char* const jCZoneFloorTempHigh = "fth";
 const char* const jCZoneFloorTempLow = "ftl";
 const char* const jCZoneCurrRoomTemp = "crt";
 const char* const jCZoneCurrFloorTemp = "cft";
-const char* const jCZoneValveOpened = "vopened";
+const char* const jCZoneActuatorOpened = "actopened";
+const char* const jCZoneLowTempMode = "lowmode";
 
 //KType
 const char* const jTargetKType = "ktype";
@@ -133,7 +150,6 @@ const char* const jWaterBoilerTTriggerName = "trgname";
 const char* const jWaterBoilerElHeatingEnabled = "elhenabled";
 const char* const jWaterBoilerElPowerChannel = "powerch";
 const char* const jWaterBoilerElHeatingData = "powerdata";
-const char* const jWaterBoilerPDEnabled = "enabled";
 const char* const jWaterBoilerEHStartHour = "starth";
 const char* const jWaterBoilerEHStartMin = "startm";
 const char* const jWaterBoilerEHStopHour = "stoph";
@@ -161,6 +177,11 @@ const char* const jWoodBoilerTargetExhaust = "exhaust";
 const char* const jWoodBoilerTargetLadomat = "ladomat";
 //const char* const jWoodBoiler
 
+//SystemFan
+const char* const jTargetSystemFan = "sysfan";
+const char* const jSysFanTSensorName = "tsname";
+const char* const jSysFanMinTemp = "mint";
+const char* const jSysFanMaxTemp = "maxt";
 //Action values
 //const char* const jActionClick = "click";
 
@@ -175,6 +196,7 @@ const char* const jValueResultOk = "ok";
 const char* const jValueResultError = "error";
 const char* const jValueResultNull = "null";
 const char* const jValueResultDone = "done";
+const char* const jValueResultUnknownAction = "act_unknown";
 
 const char* const jValueConfig = "config";
 const char* const jValueConfigPlus = "configplus";
@@ -185,6 +207,8 @@ const char* const jErrorUnsupportedCommand = "unsuppcmd";
 const char* const jErrorFileOpenError = "file_open_error";
 const char* const jErrorFileCloseError = "file_close_error";
 const char* const jErrorFileWriteError = "file_write_error";
+const char* const jErrorItemByNameNotFound = "item_by_name_not_found";
+
 
 
 #endif

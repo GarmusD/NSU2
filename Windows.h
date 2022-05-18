@@ -14,48 +14,18 @@
 #include "msg.h"
 #include "Scenario.h"
 #include "List.h"
+#include "WindowSplash.h"
+#include "SideWindow.h"
+#include "WindowKatiline.h"
 /*********************************************
 *********************************************/
 
-//#define FLASH_CS_PIN 52
-//#define SPI_RATE 21//4
-
-//Font selection 
-//BVS= Bitstream vera sans, suffix = font size in pixel (height)
-//#define BVS_13 10
-//#define BVS_15 12
-//#define BVS_19 14
-//#define BVS_22 18
-//#define BVS_28 22
-//#define BVS_34 28
-//#define BVS_43 38
-//#define BVS_52 53
-//#define BVS_74 78
-//#define BVS_112 122
-
-/*********************************************
-*********************************************/
-
-//class WindowBase
-//{
-//public:
-//	WindowBase(UTFT* utft);
-//	~WindowBase(void);
-//private:
-//	UTFT* tft;
-//}
-/*********************************************
-*********************************************/
-
-class CWindowInfo
+enum CurrentWindow
 {
-public:
-	CWindowInfo(CWindow* win, String name);
-	CWindow* Window;
-	String Name;
-	bool Active;
+	CurrWindowNone,
+	CurrWindowsSplash,
+	CurrWindowMain
 };
-
 
 /*********************************************
 *********************************************/
@@ -64,47 +34,56 @@ class CWindows:public Events
 public:
 	CWindows(UTFT &utft, UTouch &utouch);
 	~CWindows(void);
-	void Begin();
-	UTFT& getUTFT();
-	//UTFT_CTE* getUTFT_CTE();
-	Rect getAvailableArea();
-	Rect getSideWindowArea();
-	Scenario& getScenario();
-	//void TimeEvent(uint32_t t);
-	void DrawCurrentWindow();
-	//void CreateSideWindow();
-	void CloseWindow(CWindow* win);
-	void ClearScreen();
-	CWindow* CreateWindow();
-	CWindow* AddWindow(CWindow* createdWindow);
-	void AddSideWindow(CWindow* swindow);
-	CWindow* CreateWindow(byte* sc_buf);
-	CWindow* CreateModal();
-	void ReInitTFT();
-	void ForceLCDBacklight();
+	void Begin(void);
+	UTFT& getUTFT(void);
+		
+	Scenario& getScenario(void);
+	
+	Splash & GetSplashScreen(void);
+	WindowKatiline & GetMainWindow(void);
+	SideWindow & GetSideWindow(void);
+
+	Rect& GetSplashArea(void);
+	Rect& GetSideWindowArea(void);
+	Rect& GetMainWindowArea(void);
+
+	void DrawSplashScreen(void);
+	void DrawMainWindow(void);
+	void DrawSideWindow(void);
+
+	void ClearScreen(void);
+	
+	void ReInitTFT(void);
+	void ForceLCDBacklight(void);
+	void Reset(void);
+	void InitHW(void);
+	void BeginSplashWindow(void);
+	void BeginSideWindow(void);
+	void BeginMainWindow(void);
 private:
 	UTFT &tft;
 	UTouch &touch;
-	TouchInput* touchinput;
-	Scenario* scenario;
+	TouchInput touchinput;
+	Scenario scenario;
+	//TouchInput* touchinput;
+	//Scenario* scenario;
 	
-	CWindow* sideWindow;
-	CWindow* currentWindow;
-	CWindow* previousWindow;
-	CWindow* modalWindow;
+	SideWindow sideWindow;
+	WindowKatiline mainWindow;
+	Splash splashWindow;
+
+	CurrentWindow currWindow;
 
 	Rect availableArea;
-	bool sw_enabled;
-	bool sw_area_calculated;
-	Rect sw_area;
+	Rect side_area;
+	Rect main_area;
 	uint32_t last_reinit;
 	
-	void DisableSideWindow();
-	void EnableSideWindow();
-	unsigned char ReadFontIC_ID();
+	unsigned char ReadFontIC_ID(void);
+
+	
+
 	void OnTimeSlice();
-	List<CWindowInfo> allWindows;
-	List<CWindow> sideWindows;
 };
 
 extern CWindows Windows;

@@ -10,14 +10,13 @@ CBootChecker::~CBootChecker()
 {
 }
 
+void CBootChecker::Reset()
+{
+	canPauseBoot = true;
+}
+
 void CBootChecker::CheckBootWait(int seconds)
 {
-	//StaticJsonBuffer<200> jbuff;
-	//JsonObject& root = jbuff.createObject();
-	//root[jKeyTarget] = jTargetSystem;
-	//root[jKeyAction] = jSysStatusReadyPauseBoot;
-	//PrintJson.Print(root);
-
 	SystemStatus.SetState(SystemReadyPauseBoot);
 
 	uint32_t finish = millis() + (seconds * 1000);
@@ -53,29 +52,29 @@ void CBootChecker::PauseBootRequested()
 
 void CBootChecker::PrintBootPausedMsg()
 {
-	StaticJsonBuffer<128> jBuffer;
-	JsonObject& j = jBuffer.createObject();
+	DynamicJsonDocument jBuffer(512);
+	JsonObject j = jBuffer.to<JsonObject>();
 	j[jKeyTarget] = jTargetSystem;
-	j[jKeyAction] = jSystemActionPauseBoot;
+	j[jKeyAction] = jKeySystemActionPauseBoot;
 	j[jKeyResult] = jValueResultOk;
 	PrintJson.Print(j);
 }
 
 void CBootChecker::PrintBootPauseErrorMsg()
 {
-	StaticJsonBuffer<128> jBuffer;
-	JsonObject& j = jBuffer.createObject();
+	DynamicJsonDocument jBuffer(512);
+	JsonObject j = jBuffer.to<JsonObject>();
 	j[jKeyTarget] = jTargetSystem;
-	j[jKeyAction] = jSystemActionPauseBoot;
+	j[jKeyAction] = jKeySystemActionPauseBoot;
 	j[jKeyResult] = jValueResultError;
 	j[jKeyMessage] = "notAllowed";
 	PrintJson.Print(j);
 }
 
-void CBootChecker::ParseJson(JsonObject& root)
+void CBootChecker::ParseJson(JsonObject root)
 {
-	//String action = root[jKeyAction].asString();
-	//if (action.equals("pauseboot"))
+	//const char* action = root[jKeyAction].asString();
+	//if (strcmp(action, "pauseboot") == 0)
 	//{
 	//	
 	//}

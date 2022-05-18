@@ -1,5 +1,15 @@
 #include "utilities.h"
 
+void Utilities::clearString(char * str, uint8_t l)
+{
+	for (uint8_t i = 0; i < l; i++) str[i] = 0;
+}
+
+void Utilities::ClearAndCopyString(const char * source, char * dest)
+{
+	clearString(dest);
+	strncpy(dest, source, MAX_NAME_LENGTH - 1);
+}
 
 bool Utilities::CheckMillis(uint32_t & mill, uint32_t count, bool reset_millis /*= true*/)
 {
@@ -65,8 +75,6 @@ float Utilities::roundFloat(float value, int places)
 	float res = x / prec;
 
 	if(sign) res = -(res);
-
-	//Log.debug("roundFloat input: "+String(value)+" output: "+String(intpart));
 
 	return res;
 }

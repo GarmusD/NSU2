@@ -1,7 +1,8 @@
 #ifndef TimeWidget_h
 #define TimeWidget_h
 
-#include "windows.h"
+#include "Window.h"
+#include "SystemStatus.h"
 #include "UI.h"
 #include "advancedFunctions.h"
 
@@ -16,6 +17,8 @@ private:
 	unsigned long int lasttick;
 	bool separator;
 	int hour, min;
+	char buff[5];
+	uint8_t r;
 };
 
 #endif

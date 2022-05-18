@@ -1,5 +1,12 @@
 #include "switches.h"
-#include "Settings.h"
+#include "SystemStatus.h"
+#include "Utilities.h"
+
+
+const int CSwitches::CURRENT_CONFIG_VERSION = 1;
+const VersionInfo CSwitches::VINFO = { 'S', 'W', 'T', CURRENT_CONFIG_VERSION };
+const char* CSwitches::CFG_FILE = "switches.cfg";
+
 
 Switch::Switch(void)
 {
@@ -11,17 +18,33 @@ Switch::~Switch(void)
 {
 }
 
+void Switch::Begin()
+{
+	loading = false;
+	if (delayedSaveState)
+	{
+		SaveStatus();
+		delayedSaveState = false;
+	}
+}
 
 const char* Switch::GetName()
 {
 	return name;
 }
 
+uint8_t Switch::GetConfigPos()
+{
+	return configPos;
+}
+
 void Switch::SwitchState()
 {
 	if(isForced)
 	{
-		Log.debug("Switch '"+String(name)+"': Cannot switch state when forced.");
+		char s[64];
+		sprintf(s, "Switch '%s': Cannot switch state when forced.", name);
+		Log.debug(s);
 		return;
 	}
 	if(status == STATUS_ON)
@@ -39,13 +62,17 @@ void Switch::SwitchState()
 	}
 	else
 	{
-		Log.error("Switch '"+String(name)+"' has incorrect state: "+GetStatusName(status));
+		char s[64];
+		sprintf(s, "Switch '%s' has incorrect state: %s", name, GetStatusName(status));
+		Log.error(s);
 	}
 }
 
 void Switch::SetStatus(Status value)
 {
-	Log.debug("Trying to set for switch '"+String(name)+"' Status: "+GetStatusName(value));
+	char s[64];
+	sprintf(s, "Trying to set for switch '%s' Status: %s", name, GetStatusName(value));
+	Log.debug(s);
 	switch(value){
 	case STATUS_DISABLED_OFF:
 	case STATUS_DISABLED_ON:
@@ -63,7 +90,8 @@ void Switch::SetStatus(Status value)
 		}
 		break;
 	default:
-		Log.error("Setting incorrect state for switch '"+String(name)+"' "+GetStatusName(value));
+		sprintf(s, "Setting incorrect state for switch '%s' %s", name, GetStatusName(value));
+		Log.error(s);
 		break;
 	}
 }
@@ -82,7 +110,37 @@ Status Switch::GetStatus()
 
 void Switch::SaveStatus()
 {
-	EEPROM.SetByte(EEPROM_POS_SWITCH[config_pos], (byte)status);
+	if (loading)
+	{
+		delayedSaveState = true;
+		return;
+	}
+	if (FileManager.OpenConfigFile(CSwitches::CFG_FILE, CSwitches::VINFO) == FileStatus_OK)
+	{
+		SwitchData data;
+		uint32_t fpos = sizeof(VersionInfo) + configPos * sizeof(data);
+		if (FileManager.FileSeek(fpos))
+		{
+			if (FileManager.FileReadBuffer(&data, sizeof(data)))
+			{
+				data.status = status;
+				if (FileManager.FileSeek(fpos))
+				{
+					FileManager.FileWriteBuff(&data, sizeof(data));
+					FileManager.FileClose();
+					return;
+				}
+			}			
+		}
+		char s[64];
+		sprintf(s, "Switches config file '%s' read error. ConfigPos: %d", CSwitches::CFG_FILE, configPos);
+		Log.error(s);
+		FileManager.FileClose();
+		return;
+	}
+	char s[64];
+	sprintf(s, "Switches config file '%s' open error.", CSwitches::CFG_FILE);
+	Log.error(s);
 }
 
 void Switch::AddDependance(Switch* s, Status OnStatus, Status myStatus)
@@ -106,14 +164,18 @@ void Switch::HandleStatusChange(void* Sender, Status value)
 	{
 		if(value == onStatus && !isForced)
 		{
-			Log.debug("Switch '"+String(name)+"' is forced state to "+GetStatusName(forced_status));
+			char s[64];
+			sprintf(s, "Switch '%s' is forced state to %s", name, GetStatusName(forced_status));
+			Log.debug(s);
 			isForced = true;
 			PrintStatus();
 			DispatchStatusChange(this, forced_status);
 		}
 		else if(isForced)
 		{
-			Log.debug("Force for Switch '"+String(name)+"' is disabled. Returning to old state "+GetStatusName(status));
+			char s[128];
+			sprintf(s, "Force for Switch '%s' is disabled. Returning to old state %s", name, GetStatusName(status));
+			Log.debug(s);
 			isForced = false;
 			PrintStatus();
 			DispatchStatusChange(this, status);
@@ -126,34 +188,25 @@ bool Switch::IsForced()
 	return isForced;
 }
 
-String Switch::GetInfoString()
-{
-	if(isForced)
-	{
-		return "INFO: SWITCH: "+String(name)+" "+GetStatusName(forced_status) + " " + String((int)isForced);
-	}
-	else
-	{
-		return "INFO: SWITCH: "+String(name)+" "+GetStatusName(status) + " " + String((int)isForced);
-	}
-}
-
 void Switch::Init()
 {
 	status = STATUS_ON;
 	forced_status = STATUS_UNKNOWN;
 	onStatus = STATUS_UNKNOWN;
 	depend = NULL;
-	config_pos = 255;
+	configPos = 255;
 	name[0] = 0;
 	isForced = false;
+	loading = false;
+	delayedSaveState = false;
 }
 
-void Switch::ApplySettings(byte cfgPos, const SwitchData& data)
+void Switch::ApplyConfig(uint8_t cfgPos, const SwitchData& data)
 {
-	config_pos = cfgPos;
+	loading = true;
+	configPos = cfgPos;
 	strlcpy(name, data.Name, MAX_NAME_LENGTH);
-	SetStatus((Status)EEPROM.GetByte(EEPROM_POS_SWITCH[config_pos]));
+	SetStatus((Status)data.status);
 	if (data.DependOn[0] != 0)
 	{
 		AddDependance(Switches.GetByName(data.DependOn), (Status)data.depstate, (Status)data.forcestate);
@@ -164,15 +217,15 @@ void Switch::WriteSettings()
 {
 }
 
-void Switch::CleanUp()
+void Switch::Reset()
 {
 	Init();
 }
 
 void Switch::PrintStatus()
 {
-	StaticJsonBuffer<512> jBuff;
-	JsonObject& root = jBuff.createObject();
+	DynamicJsonDocument jBuff(512);
+	JsonObject root = jBuff.to<JsonObject>();
 	root[jKeyTarget] = jTargetSwitch;
 	root[jKeyAction] = jValueInfo;
 	root[jKeyName] = name;
@@ -180,6 +233,9 @@ void Switch::PrintStatus()
 	root[jSwitchIsForced] = isForced;
 	PrintJson.Print(root);
 }
+
+
+
 
 Switch* CSwitches::GetByName(const char* name)
 {
@@ -192,23 +248,191 @@ Switch* CSwitches::GetByName(const char* name)
 	return NULL;
 }
 
-void CSwitches::ParseJson(JsonObject& jo)
+Switch* CSwitches::GetByConfigPos(uint8_t cfgPos)
 {
-	if (jo.containsKey(jKeyName))
+	Switch* swth;
+	for (int i = 0; i < Count(); i++)
 	{
-		Switch* sw = GetByName(jo[jKeyName]);
-		if (sw)
+		swth = Get(i);
+		if (swth->GetConfigPos() == cfgPos) return swth;
+	}
+	return NULL;
+}
+
+void CSwitches::Begin()
+{
+	Switch* swth;
+	for (uint8_t i = 0; i < Count(); i++)
+	{
+		swth = Get(i);
+		if (swth)
+			swth->Begin();
+	}
+}
+
+void CSwitches::Reset()
+{
+	Clear();
+}
+
+void CSwitches::LoadConfig()
+{
+	switch (FileManager.OpenConfigFile(CFG_FILE, VINFO))
+	{
+	case FileStatus_OK:
+		for (size_t i = 0; i < MAX_SWITCHES_COUNT; i++)
 		{
-			if (jo.containsKey(jKeyAction))
+			SwitchData data;
+			if (FileManager.FileReadBuffer(&data, sizeof(data)))
 			{
-				String action = jo[jKeyAction];
-				if (action.equals(jSwitchClick))
+				if (data.Valid)
 				{
-					sw->SwitchState();
-					return;
+					Switch *sw = Add();
+					if (sw)
+					{
+						sw->ApplyConfig(i, data);
+					}
+				}
+			}
+			else
+			{
+				//Read error
+				char s[64];
+				sprintf(s, "Switches config file read error. Pos: %d", i);
+				Log.error(s);
+			}
+		}
+		FileManager.FileClose();
+		break;
+	case FileStatus_ReCreate:
+		//FilePos at end of header
+		Log.error("Writing defaults...");
+		for (size_t i = 0; i < MAX_SWITCHES_COUNT; i++)
+		{
+			const SwitchData& data = Defaults.GetDefaultSwitchData(i);
+			if (!FileManager.FileWriteBuff(&data, sizeof(data)))
+			{
+				char s[64];
+				sprintf(s, "Switches config file write defaults error. Pos: %d", i);
+				Log.error(s);
+			}
+			if (data.Valid)
+			{
+				Switch* sw = Add();
+				if (sw)
+				{
+					sw->ApplyConfig(i, data);
 				}
 			}
 		}
+		FileManager.FileClose();
+		break;
+	case FileStatus_RWError:
+	case FileStatus_Inaccessible:
+		Log.error("SD inaccessible or Read/Write error. Reading defaults...");
+		for (size_t i = 0; i < MAX_SWITCHES_COUNT; i++)
+		{
+			const SwitchData& data = Defaults.GetDefaultSwitchData(i);
+			if (data.Valid)
+			{
+				Switch *sw = Add();
+				if (sw)
+				{
+					sw->ApplyConfig(i, data);
+				}
+			}
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+bool CSwitches::GetConfigData(uint8_t cfgPos, SwitchData & data)
+{
+	if (FileManager.OpenConfigFile(CFG_FILE, VINFO) == FileStatus_OK)
+	{
+		uint32_t fpos = sizeof(VersionInfo) + cfgPos * sizeof(data);
+		if (FileManager.FileSeek(fpos))
+		{
+			if (FileManager.FileReadBuffer(&data, sizeof(data)))
+			{
+				FileManager.FileClose();
+				return true;
+			}
+		}
+		FileManager.FileClose();
+	}
+	return false;
+}
+
+bool CSwitches::ValidateSetupDataSet(JsonObject & jo)
+{
+	if (jo.containsKey(jKeyConfigPos) && 
+		jo.containsKey(jKeyEnabled) &&
+		jo.containsKey(jKeyName) &&
+		jo.containsKey(jSwitchDependName) &&
+		jo.containsKey(jSwitchDependState) &&
+		jo.containsKey(jSwitchForceState) &&
+		jo.containsKey(jSwitchCurrState))
+	{
+		return true;
+	}
+	PrintJson.PrintResultError(jTargetSwitch, jErrorInvalidDataSet);
+	return false;
+}
+
+void CSwitches::ParseJson(JsonObject & jo)
+{
+	const char * action = jo[jKeyAction];
+	if (strcmp(action, jSwitchClick) == 0)
+	{
+		if (jo.containsKey(jKeyName))
+		{
+			Switch* sw = GetByName(jo[jKeyName]);
+			if (sw)
+			{
+				sw->SwitchState();
+				return;
+			}
+		}
+		return;
+	}
+	else if (strcmp(action, jKeySetup) == 0)
+	{
+		if (ValidateSetupDataSet(jo))
+		{
+			SwitchData data;
+			uint8_t cfgPos = jo[jKeyConfigPos];
+			data.Valid = jo[jKeyEnabled];
+			Utilities::ClearAndCopyString(jo[jKeyName], data.Name);
+			Utilities::ClearAndCopyString(jo[jSwitchDependName], data.DependOn);
+			data.depstate = jo[jSwitchDependState];
+			data.forcestate = jo[jSwitchForceState];
+			data.status = jo[jSwitchCurrState];
+
+			uint32_t fpos = sizeof(VersionInfo) + cfgPos * sizeof(data);
+			if (FileManager.OpenConfigFile(CFG_FILE, VINFO) == FileStatus_OK)
+			{
+				if (FileManager.FileSeek(fpos))
+				{
+					if (FileManager.FileWriteBuff(&data, sizeof(data)))
+					{
+						FileManager.FileClose();
+						SystemStatus.SetRebootRequired();
+						PrintJson.PrintResultOk(jTargetSwitch, jKeySetup, true);
+						return;
+					}
+				}
+				PrintJson.PrintResultError(jTargetSwitch, jErrorFileOpenError);
+				return;
+			}
+			PrintJson.PrintResultError(jTargetSwitch, jErrorFileWriteError);
+		}
+	}
+	else
+	{
+		PrintJson.PrintResultUnknownAction(jTargetSwitch, action);
 	}
 }
 CSwitches Switches;

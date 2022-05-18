@@ -17,7 +17,8 @@ public:
 	void CheckBootWait(int seconds);
 	void PauseBootRequested();
 	void ContinueBoot();
-	void ParseJson(JsonObject& root);
+	void ParseJson(JsonObject root);
+	void Reset();
 private:
 	SdFile file;
 	bool canPauseBoot;

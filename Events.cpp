@@ -89,70 +89,73 @@ void Events::OnTimeSlice()
 {
 }
 
-void Events::CleanUp()
+void Events::Reset()
 {
+	TempHandlers.Clear();
+	OnClickHandlers.Clear();
+	StatusHandlers.Clear();
 }
 
-String Events::GetStatusName(Status value)
+const char* Events::GetStatusName(Status value)
 {
 	switch (value)
 	{
 	case STATUS_UNKNOWN:
-		return "UNKNOWN";
+		return cUNKNOWN;
 		break;
 	case STATUS_OFF:
-		return "OFF";
+		return cOFF;
 		break;
 	case STATUS_ON:
-		return "ON";
+		return cON;
 		break;
 	case STATUS_MANUAL:
-		return "MANUAL";
+		return cMANUAL;
 		break;
 	case STATUS_DISABLED:
-		return "DISABLED";
+		return cDISABLED;
 		break;
 	case STATUS_DISABLED_OFF:
-		return "DISABLED_OFF";
+		return cDISABLED_OFF;
 		break;
 	case STATUS_DISABLED_ON:
-		return "DISABLED_ON";
+		return cDISABLED_ON;
 		break;
 	case STATUS_KATILAS_UNKNOWN:
-		return "UNKNOWN";
+		return cUNKNOWN;
 		break;
 	case STATUS_KATILAS_UZGESES:
-		return "UZGESES";
+		return cKATILAS_UZGESES;
 		break;
 	case STATUS_KATILAS_IKURIAMAS:
-		return "IKURIAMAS";
+		return cKATILAS_IKURIAMAS;
 		break;
 	case STATUS_KATILAS_KURENASI:
-		return "KURENASI";
+		return cKATILAS_KURENASI;
 		break;
 	case STATUS_KATILAS_GESTA:
-		return "GESTA";
+		return cKATILAS_GESTA;
 		break;
 	case STATUS_LADOMAT_OFF:
-		return "OFF";
+		return cLADOMAT_OFF;
 		break;
 	case STATUS_LADOMAT_ON:
-		return "ON";
+		return cLADOMAT_ON;
 		break;
 	case STATUS_LADOMAT_MANUAL:
-		return "MANUAL";
+		return cLADOMAT_MANUAL;
 		break;
 	case STATUS_EXHAUSTFAN_OFF:
-		return "OFF";
+		return cEXHAUSTFAN_OFF;
 		break;
 	case STATUS_EXHAUSTFAN_ON:
-		return "ON";
+		return cEXHAUSTFAN_ON;
 		break;
-	case STATUS_EXHAUST_MANUAL:
-		return "MANUAL";
+	case STATUS_EXHAUSTFAN_MANUAL:
+		return cEXHAUSTFAN_MANUAL;
 		break;
 	default:
-		return "SHIT";
+		return cSHIT;
 		break;
 	}
 }

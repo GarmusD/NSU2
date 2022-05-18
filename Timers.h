@@ -7,6 +7,7 @@
 #include "DueTimer.h"
 #include "advancedFunctions.h"
 #include "Logger.h"
+#include "StaticList.h"
 
 struct TimerEvent
 {
@@ -15,6 +16,7 @@ struct TimerEvent
 	uint32_t lastfire;
 	uint32_t resolution;
 	bool onlyOnce;
+	void Reset();
 };
 
 class CTimers : public Events
@@ -31,6 +33,7 @@ public:
 	void AddMinuteStartHandler(Events* handler, int event_id);
 	void ChangeResolution(Events* handler, uint32_t new_resolution);
 
+	void Reset();
 private:
 	void OnTimeSlice();
 	bool started;

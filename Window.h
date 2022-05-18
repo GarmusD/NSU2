@@ -12,45 +12,42 @@
 
 class CWindow: public Events
 {
+private:
+	bool active;
 public:
-CWindow(Rect windowarea, UTFT& utft, Scenario& Sc, byte* scbuf);
-~CWindow(void);
-String Name;
-bool IsActive();
-void Acivate();
-void Deactivate();
+CWindow(/*Rect windowarea, */UTFT& utft, Scenario& Sc, uint8_t* scbuf);
+virtual ~CWindow(void);
+char Name[MAX_NAME_LENGTH];
+
 void Message(Msg msg);
 virtual void TimeEvent(uint32_t t);
+bool IsActive(void);
+void SetWindowArea(Rect& r);
 Rect getWindowArea();
 Rect getClientArea();
 void SetColor(RGBColor clr);
 void SetBorderColor(RGBColor clr);
 void Draw();
-void DrawArea(Rect area);
 void AddUIElement(UIBase* element);
 UIBase* GetUIElement(UIID* id);
-void PlayScenario(int x, int y, byte* buf);
+void PlayScenario(int x, int y, uint8_t* buf);
 Scenario& getScenario();
 void DisableWindow();
 void EnableWindow();
 UTFT& GetUTFT();
-//UTFT_CTE* GetUTFT_CTE();
-ModalResult IsSetModalResult();
-virtual char* GetModalResult();
 void Invalidate();
+virtual void Begin();
+void Reset(void);
 protected:
 UTFT& tft;
 List<UIBase> uielements;
 Scenario& scenario;
-byte* sc_buf;
+uint8_t* sc_buf;
 Rect windowArea;
 Rect clientArea;
 RGBColor clr;
 RGBColor bclr;
-ModalResult mresult;
 bool window_drawn;
-bool UIInRect(UIBase* elem, Rect r);
-bool PointInRect(int x, int y, Rect r);
 void setClientArea();
 };
 

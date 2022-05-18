@@ -2,6 +2,7 @@
 #ifndef SystemStatus_h
 #define SystemStatus_h
 
+#include "BootChecker.h"
 
 #include "Events.h"
 #include "Timers.h"
@@ -10,12 +11,6 @@
 #include "FreeMem.h"
 #include "JsonPrinter.h"
 //
-#include "Settings.h"
-#include "TSensors.h"
-#include "switches.h"
-#include "RelayModule.h"
-#include "TempTrigger.h"
-#include "CirculationPump.h"
 
 enum ESystemStatus
 {
@@ -34,13 +29,19 @@ public:
 	void SetState(ESystemStatus state);
 	void PrintSystemState();
 	void Snapshot();
-	void ParseJson(JsonObject& jo);
+	void ParseJson(JsonObject & jo);
 	bool TimeIsSet();
+	bool GetRebootReqested();
+	bool GetRebootRequired();
+	void SetRebootRequired();
+	void Reset();
 private:
 	ESystemStatus currState;
 	uint32_t upTime;
 	bool timeIsSet;
-	void SetDateTime(JsonObject& jo);
+	bool rebootReqested;
+	bool rebootRequired;
+	void SetDateTime(JsonObject jo);
 	void HandleTimerEvent(int te_id);
 };
 

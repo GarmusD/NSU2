@@ -11,9 +11,9 @@
 #include "Scenario.h"
 #include "TSensors.h"
 #include "MAX31855.h"
-#include "CirculationPump.h"
+#include "CirculationPumps.h"
 #include "switches.h"
-#include "WoodBoiler.h"
+#include "WoodBoilers.h"
 /*********************************************
 *********************************************/
 #define I_AM_PAINTED 1
@@ -95,7 +95,7 @@ public:
 	~UIBase(void);
 	TextAlign textAlign;
 	const unsigned char* Font;
-	byte FontHeight;
+	uint8_t FontHeight;
 	UIClass getUIClass();
 	char* getUIID();
 	void SetUIID(const char* id);
@@ -104,9 +104,7 @@ public:
 	virtual void SetPosition(int x, int y);
 	virtual void GetPosition(int& x, int& y);
 	virtual void TimeEvent(uint32_t t);
-	//virtual void SetCaption(const char *text);
-	//virtual void SetCaption(String str);
-	virtual void SetFont(const byte* fnt);
+	virtual void SetFont(const uint8_t* fnt);
 	void SetTag(int val);
 	int GetTag();	
 	virtual void Invalidate();
@@ -124,15 +122,15 @@ protected:
 	//UTFT_CTE* cte;
 	
 	int tag;
-	byte flags;
+	uint8_t flags;
 	//char *caption;
 
 	virtual void doOnFocus();
 	virtual void doOnLeave();
 	virtual void doOnClick(int x, int y);
-	void SetFlag(byte flag);
-	void ClearFlag(byte flag);
-	bool FlagIsSet(byte flag);
+	void SetFlag(uint8_t flag);
+	void ClearFlag(uint8_t flag);
+	bool FlagIsSet(uint8_t flag);
 	int getWX(int x);//world x
 	int getWY(int y);//world y
 private:
@@ -146,8 +144,7 @@ public:
 	~UILabel();
 	void Draw();
 	void SetCaption(const char *text);
-	void SetCaption(const String str);
-	void SetFont(const byte* fnt);
+	void SetFont(const uint8_t* fnt);
 	const char* GetCaption();
 	void SetColor(RGBColor faceClr, RGBColor backClr);
 	int GetCaptionWidth();
@@ -160,7 +157,6 @@ private:
 	void doOnFocus();
 	void doOnLeave();
 	void doOnClick(int x, int y);
-	void setMaxChars();
 	int lastwidth;
 	Interval interval1, interval2;
 	int tout_shift;
@@ -175,7 +171,6 @@ public:
 	void SetSize(int w, int h);
 	void Draw();
 	void SetCaption(const char *text);
-	void SetCaption(const String str);
 	void SetColor(RGBColor fclr, RGBColor bclr, RGBColor brdrclr);
 	void SetEnabled(bool value);
 protected:
@@ -259,15 +254,15 @@ class UIGraphics: public UIBase
 public:
 	UIGraphics(CWindow* window, bool reg=true);
 	~UIGraphics();
-	void SetGraphicsBytes(byte* buf);
-	void SetVectorBytes(byte* buf);
+	void SetGraphicsBytes(uint8_t* buf);
+	void SetVectorBytes(uint8_t* buf);
 	void SetColor(RGBColor color);
 	void SetBackColor(RGBColor color);
 	void Draw();
 private:
 	bool isVector;
 	Scenario& _scenario;
-	byte* buffer;
+	uint8_t* buffer;
 	RGBColor clr, bclr;
 	void doOnClick(int x, int y);
 };
@@ -297,7 +292,7 @@ private:
 	float t1, t2, t3;
 	int sens_count;
 	float RStep1, BStep1, RStep2, BStep2;
-	byte r1, r2, r3, b1, b2, b3;
+	uint8_t r1, r2, r3, b1, b2, b3;
 	void calculate();
 	void doOnClick(int x, int y);
 	void HandleTemperatureChange(void* Sender, float t);
@@ -313,10 +308,11 @@ public:
 	void SetRotation(int val);
 	void Draw();
 	void SetPosition(int x, int y);
+	void SetStatus(Status status);
 private:
 	CirculationPump* cp;
-	UIGraphics* gr;
-	byte* g_data;
+	UIGraphics gr;
+	uint8_t* g_data;
 	Status cp_status;
 	bool manual;
 	void doOnClick(int x, int y);
@@ -332,9 +328,11 @@ public:
 	~UILadomat(void);
 	void Draw();
 	void SetPosition(int x, int y);
+	void AttachWoodBoiler(CWoodBoiler* woodboilder);
 private:
-	UIGraphics* gr;
-	byte* g_data;
+	CWoodBoiler* wb;
+	UIGraphics gr;
+	uint8_t* g_data;
 	Status cp_status;
 	bool manual;
 	void doOnClick(int x, int y);
@@ -350,9 +348,11 @@ public:
 	~UIVentilator(void);
 	void Draw();
 	void SetPosition(int x, int y);
+	void AttachWoodBoiler(CWoodBoiler *woodboiler);
 private:
-	UIGraphics* gr;
-	byte* g_data;
+	CWoodBoiler* wb;
+	UIGraphics gr;
+	uint8_t* g_data;
 	Status cp_status;
 	bool manual;
 	void doOnClick(int x, int y);
@@ -369,7 +369,7 @@ public:
 	//void Set
 private:
 	Events* obj;
-	byte* g_data;
+	uint8_t* g_data;
 	Status status;
 	bool manual;
 	void doOnClick(int x, int y);

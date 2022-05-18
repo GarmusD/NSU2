@@ -16,11 +16,12 @@ public:
 	char* getCmdID();
 	void PrintResultError(const char* target, const char* errorcode);
 	void PrintResultNull(const char* target);
-	void PrintResultOk(const char* target, const char * action);
+	void PrintResultOk(const char* target, const char * action, bool incl_reboot_req = false);
 	void PrintResultDone(const char* target, const char * action);
 	void PrintResultFormatError();
 	void PrintResultNotAJson();
-	void PrintResultParseError();
+	void PrintResultParseError(DeserializationError& err);
+	void PrintResultUnknownAction(const char* target, const char * action);
 private:
 	char cmdid[16];
 };

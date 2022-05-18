@@ -58,19 +58,7 @@
     <ClInclude Include="WindowKatiline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CirculationPump.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="InputWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RelayModule.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SideWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TempTrigger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TimeWidget.h">
@@ -82,16 +70,7 @@
     <ClInclude Include="Graphics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Collector.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ComfortZones.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ThermoValve.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Settings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CmdServer.h">
@@ -139,16 +118,7 @@
     <ClInclude Include="Timers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WaterBoiler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="TimeSlice.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EEPROM.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="eeprom_consts.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Logger.h">
@@ -172,25 +142,82 @@
     <ClInclude Include="JsonPrinter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WoodBoiler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Windows.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SettingsOLD.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SystemFan.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="TSensors.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Alarm.h">
+    <ClInclude Include="SwitchesDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RelayModulesDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CirculationPumpsDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CirculationPumps.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Collectors.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CollectorsDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TSensorsDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ComfortZonesDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MAX31855Defs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WaterBoilers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WaterBoilersDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TempTriggers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TempTriggersDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WoodBoilers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WoodBoilersDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RelayModules.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemFansDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemFans.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Defaults.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Alarms.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AlarmsDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Ventilation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VentilationDefs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -219,31 +246,13 @@
     <ClCompile Include="WindowKatiline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CirculationPump.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="InputWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RelayModule.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="SideWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="TempTrigger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TimeWidget.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Collector.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ComfortZones.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Settings.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CmdServer.cpp">
@@ -264,13 +273,7 @@
     <ClCompile Include="Timers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="WaterBoiler.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="TimeSlice.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="EEPROM.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Logger.cpp">
@@ -288,23 +291,49 @@
     <ClCompile Include="JsonPrinter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="WoodBoiler.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Windows.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SystemFan.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="TSensors.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Alarm.cpp">
+    <ClCompile Include="CirculationPumps.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Collectors.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WaterBoilers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TempTriggers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WoodBoilers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RelayModules.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SystemFans.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Defaults.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Alarms.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Ventilation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="images\development.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

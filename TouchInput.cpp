@@ -1,7 +1,7 @@
 #include "TouchInput.h"
 //#include <UTouch.h>
 
-TouchInput::TouchInput(UTFT &tft, UTouch &utouch):backlight(tft), touch(utouch)
+TouchInput::TouchInput(UTFT &tft, UTouch &utouch): backlight(tft), touch(utouch)
 {
 	//touch = new UTouch(6,5,32,3,2);
 	touch.InitTouch();
@@ -47,7 +47,9 @@ bool TouchInput::MsgAvailable()
 			x = tft_width - x;
 		}
 		y = touch.getY();
-		Log.debug("Touch X: "+String(x)+", Y: "+String(y));
+		char s[32];
+		sprintf(s, "Touch X: %d, Y: %d", x, y);
+		Log.debug(s);
 
 		if(x == -1 || y == -1)
 		{
@@ -95,7 +97,7 @@ bool TouchInput::MsgAvailable()
 	return false;
 }
 
-Msg TouchInput::GetMessage()
+const Msg& TouchInput::GetMessage()
 {
 	return msg;
 }

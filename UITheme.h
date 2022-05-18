@@ -8,9 +8,9 @@
 #define CURSOR_WIDTH (1)
 
 struct RGBColor{
-	byte R;
-	byte G;
-	byte B;
+	uint8_t R;
+	uint8_t G;
+	uint8_t B;
 };
 
 #define bb RGBColor ({255, 255, 255})
@@ -18,8 +18,8 @@ struct RGBColor{
 static const unsigned char* DEFAULT_FONT = &BVS_22_ctf[0];
 static const unsigned char* BTN_FONT  = &BVS_19_ctf[0];
 
-const byte DEFAULT_FONT_H = 22;
-const byte BTN_FONT_H  = 19;
+const uint8_t DEFAULT_FONT_H = 22;
+const uint8_t BTN_FONT_H  = 19;
 
 const RGBColor COLOR_WHITE = {255, 255, 255};
 const RGBColor COLOR_BLACK = {0, 0, 0};

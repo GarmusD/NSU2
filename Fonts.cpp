@@ -1,15 +1,6 @@
 #include "fonts.h"
 #include "UTFT.h"
 
-/*Fonts* Fonts::instance = NULL;
-Fonts* Fonts::getInstance(UTFT* _utft)
-{
-	if(instance == NULL){
-		instance = new Fonts(_utft);
-	}
-	return instance;
-}
-*/
 Fonts::Fonts(UTFT& utft):tft(utft)
 {
 	Log.debug("Fonts::Fonts(UTFT* tft)");
@@ -21,7 +12,7 @@ Fonts::~Fonts()
 }
 
 
-int Fonts::GetFontHeight(const byte* font_data)
+int Fonts::GetFontHeight(const uint8_t* font_data)
 {
 	return font_data[0];
 }
@@ -31,7 +22,7 @@ void Fonts::Set_character_spacing(unsigned char space)
 	Charspace=space;
 }
 
-void Fonts::Put_Text_array(const char *st, int x, int y, const byte* font_data)
+void Fonts::Put_Text_array(const char *st, int x, int y, const uint8_t* font_data)
 {
 	PositionX=x;
 	PositionY=y;
@@ -62,13 +53,7 @@ void Fonts::Put_Text_array(const char *st, int x, int y, const byte* font_data)
 	sbi(tft.P_CS, tft.B_CS);								 
 }
 
-void Fonts::Put_Text(const String st, int x, int y, const byte* font_data)
-{
-	st.toCharArray(buffer, MAX_LABEL_LENGTH);
-	Put_Text_array(buffer, x, y, font_data);
-}
-
-void Fonts::Draw_character(const unsigned char character, const byte* font_data)
+void Fonts::Draw_character(const unsigned char character, const uint8_t* font_data)
 {
 	char ch = tft.fch, cl = tft.fcl;						
 	char ch2 = tft.bch, cl2 = tft.bcl;					
@@ -129,7 +114,7 @@ void Fonts::Draw_character(const unsigned char character, const byte* font_data)
 	else return;
 }
 
-void Fonts::DrawMonoBitmap(int x, int y, const byte* bitmap)
+void Fonts::DrawMonoBitmap(int x, int y, const uint8_t* bitmap)
 {
 	char ch, cl;
 	ch=tft.fch;//((fcolorr&248)|fcolorg>>5);
@@ -161,7 +146,7 @@ void Fonts::DrawMonoBitmap(int x, int y, const byte* bitmap)
 	temp=temp / 8+2;
 
 	/*
-	byte b = 10;
+	uint8_t b = 10;
 	volatile unsigned char m;
 	for(int xx=0; xx < w; xx++){
 		for(int yy=0; yy < h; yy++){
@@ -232,21 +217,13 @@ void Fonts::DrawColorBitmap(int x, int y, const unsigned short* bitmap)
 	sbi(tft.P_CS, tft.B_CS);
 }
 
-int Fonts::GetTextWidth(const String st, const byte* font_data)
-{
-	char buf[st.length()+1];
-	st.toCharArray(buf, st.length()+1);
-	return GetTextArrayWidth(buf, font_data);
-}
-
-int Fonts::GetTextArrayWidth(const char *st, const byte* font_data)
+int Fonts::GetTextArrayWidth(const char *st, const uint8_t* font_data)
 {
 	int length,i, w = 0;
 	length = strlen(st);
 	font_address=0;
 
 	font_height=font_data[0];
-	//Serial.println("FontHeight: "+String(font_height));
 
 	if (font_height>70){
 		font_size = font_data[150] * 18;
@@ -266,8 +243,6 @@ int Fonts::GetTextArrayWidth(const char *st, const byte* font_data)
 			font_header[0] = font_data[location]; location++;
 			font_header[1] = font_data[location]; location++;
 
-			//Serial.println("DBG: Char '"+String(st[i])+"' width: "+String(font_header[1]));
-
 			w += font_header[1] + Charspace;
 		}
 	}
@@ -275,7 +250,7 @@ int Fonts::GetTextArrayWidth(const char *st, const byte* font_data)
 	return w;
 }
 
-int Fonts::GetCharWidth(const char st, const byte* font_data)
+int Fonts::GetCharWidth(const char st, const uint8_t* font_data)
 {
 	int w = 0;
 	font_address=0;

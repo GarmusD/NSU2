@@ -1,9 +1,9 @@
 #include "FileManager.h"
-#include "Base64.h"
+#include "base64.hpp"
 #include "aJson.h"
 #include "JsonPrinter.h"
 
-const int InputLength = 64;
+const int InputLength = 128;
 
 CFileManager::CFileManager(const int pin, const uint8_t speed)
 {
@@ -18,7 +18,7 @@ CFileManager::~CFileManager()
 {
 }
 
-void CFileManager::Init()
+void CFileManager::InitHW()
 {
 	pinMode(sdpin, OUTPUT);
 	digitalWrite(sdpin, HIGH);
@@ -26,11 +26,27 @@ void CFileManager::Init()
 
 bool CFileManager::Begin()
 {
-	if (!sd.begin(sdpin, sdspeed)) {
+	if (!sd.begin(sdpin)) 
+	{
 		Log.error("SD access error!");
 		sdOk = false;
 		return false;
 	}
+	
+	
+	//sd.remove("switches.cfg");
+	//sd.remove("tempsens.cfg");
+	//sd.remove("relays.cfg");
+	//sd.remove("triggers.cfg");
+	//sd.remove("crcpumps.cfg");
+	//sd.remove("colltrs.cfg");
+	//sd.remove("cmfzones.cfg");
+	//sd.remove("ktype.cfg");
+	//sd.remove("wtrboilr.cfg");
+	//sd.remove("woodblr.cfg");
+	//sd.remove("sysfan.cfg");
+	//sd.remove("alarm.cfg");
+
 	sdOk = true;
 	return true;
 }
@@ -45,7 +61,146 @@ SdFat & CFileManager::SDFat()
 	return sd;
 }
 
-void CFileManager::ReadFile(JsonObject& jo)
+bool CFileManager::FileExists(const char * fname)
+{
+	if (file.isOpen())
+	{
+		file.close();
+	}
+	return sd.exists(fname);
+}
+
+bool CFileManager::FileOpen(const char * fname)
+{
+	if (file.isOpen())
+		file.close();
+	return file.open(fname, O_RDWR);
+}
+
+bool CFileManager::FileCreate(const char * fname)
+{
+	if (file.isOpen())
+		file.close();
+	return file.open(fname, O_RDWR | O_TRUNC | O_CREAT);
+}
+
+bool CFileManager::FileTruncate()
+{
+	return file.truncate(0);
+}
+
+bool CFileManager::FileClose()
+{
+	if (file.isOpen())
+	{
+		return file.close();
+	}
+	return false;
+}
+
+bool CFileManager::FileSeek(uint32_t pos)
+{
+	return file.seekSet(pos);
+}
+
+uint8_t CFileManager::FileReadByte()
+{
+	return file.read();
+}
+
+int32_t CFileManager::FileReadInt()
+{
+	int32_t res;
+	file.read(&res, sizeof(int32_t));
+	return res;
+}
+
+bool CFileManager::FileReadBuffer(void * buff, size_t length)
+{
+	return file.read(buff, length) != -1;
+}
+
+bool CFileManager::FileWriteByte(uint8_t val)
+{
+	file.write(val);
+	file.sync();
+	return !file.getWriteError();
+}
+
+bool CFileManager::FileWriteInt(int32_t val)
+{
+	file.write(&val, sizeof(val));
+	file.sync();
+	return !file.getWriteError();
+}
+
+bool CFileManager::FileWriteBuff(const void * buff, size_t length)
+{
+	file.write(buff, length);
+	file.sync();
+	return !file.getWriteError();
+}
+
+FileStatus CFileManager::OpenConfigFile(const char * fname, const VersionInfo & vi)
+{
+	if (!SDCardOk())
+		return FileStatus_Inaccessible;
+
+	if (!FileExists(fname))
+	{
+		char s[128];
+		sprintf(s, "Config file '%s' does not exists. Creating new one...", fname);
+		Log.info(s);
+		if (FileCreate(fname))
+		{
+			goto RecreateFile;
+		}
+		return FileStatus_Inaccessible;
+	}
+	if (FileOpen(fname) && file.fileSize() >= sizeof(VersionInfo))
+	{
+		VersionInfo cvi;
+		FileReadBuffer(&cvi, sizeof(VersionInfo));
+		//Compare versions
+		if (cvi.vstring[0] == vi.vstring[0] && cvi.vstring[1] == vi.vstring[1] && cvi.vstring[2] == vi.vstring[2] && cvi.version == vi.version)
+		{
+			return FileStatus_OK;
+		}
+		else
+		{
+			char s[128];
+			sprintf(s, "Config file '%s' version mismatch.", fname);
+			Log.info(s);
+			goto RecreateFile;
+		}
+	}
+	else
+	{
+		char s[128];
+		sprintf(s, "Config file '%s' is corrupted. Recreating...", fname);
+		Log.info(s);
+		goto RecreateFile;
+	}
+	return FileStatus_Inaccessible;
+
+RecreateFile:
+	Log.info("Rewriting config file header...");
+	if (!FileTruncate())
+	{
+		Log.error("FileTruncate() error.");
+		FileClose();
+		return FileStatus_RWError;
+	}
+	if (!FileWriteBuff(&vi, sizeof(VersionInfo)))
+	{
+		Log.error("FileWriteBuff() error while writing VersionInfo header.");
+		FileClose();
+		return FileStatus_RWError;
+	}
+	return FileStatus_ReCreate;
+}
+
+void CFileManager::ReadFile(JsonObject jo)
 {
 	Log.debug("CFileManager::ReadFile()");
 	char fname[MAX_NAME_LENGTH];
@@ -53,24 +208,24 @@ void CFileManager::ReadFile(JsonObject& jo)
 
 	if(jo.containsKey(jFileManFileName))
 		strlcpy(fname, jo[jFileManFileName], MAX_NAME_LENGTH);
-	String cmdid = String(PrintJson.getCmdID());
+	const char * cmdid = PrintJson.getCmdID();
 
 	if (file.open(fname, O_READ))
 	{
 		
-		char input[InputLength];
-		char base64out[InputLength*2];
+		unsigned char input[InputLength];
+		unsigned char base64out[InputLength*2];
 
 		int res = file.read(input, InputLength);
 		while (res > 0)
 		{
-			int l = base64_encode(base64out, input, res);
+			int l = encode_base64(input, res, base64out);
 			base64out[l] = 0;
-			StaticJsonBuffer<512> jBuff;
-			JsonObject& root = jBuff.createObject();
+			DynamicJsonDocument jBuff(512);
+			JsonObject root = jBuff.to<JsonObject>();
 			root[jKeyTarget] = jTargetFileManager;
 			root[jKeyAction] = jValueGet;// jFileManActionRead;
-			if (cmdid.length())
+			if (cmdid[0] != 0)
 				root[jKeyCmdID] = cmdid;
 			root[jKeyResult] = jValueResultOk;
 			root[jFileManData] = base64out;
@@ -81,11 +236,11 @@ void CFileManager::ReadFile(JsonObject& jo)
 		}
 		if (res == 0)
 		{
-			StaticJsonBuffer<512> jBuff;
-			JsonObject& root = jBuff.createObject();
+			DynamicJsonDocument jBuff(512);
+			JsonObject root = jBuff.to<JsonObject>();
 			root[jKeyTarget] = jTargetFileManager;
 			root[jKeyAction] = jValueGet;// jFileManActionRead;
-			if (cmdid.length())
+			if (cmdid[0] != 0)
 				root[jKeyCmdID] = cmdid;
 			root[jKeyResult] = jValueResultDone;
 
@@ -103,7 +258,7 @@ void CFileManager::ReadFile(JsonObject& jo)
 	PrintJson.PrintResultError(jTargetFileManager, "file_open_error");
 }
 
-void CFileManager::WriteFile(JsonObject& jo)
+void CFileManager::WriteFile(JsonObject jo)
 {
 	if (!isWriting)
 	{
@@ -136,10 +291,10 @@ void CFileManager::WriteFile(JsonObject& jo)
 		{
 			if (strcmp(jo[jKeyContent], jFileManData) == 0)
 			{
-				char output[InputLength];
-				char base64in[InputLength * 2];
-				strlcpy(base64in, jo[jFileManData], InputLength * 2);
-				int res = base64_decode(output, base64in, strlen(base64in));
+				unsigned char output[InputLength];
+				unsigned char base64in[InputLength * 2];
+				strlcpy((char*)base64in, jo[jKeyValue], InputLength * 2);
+				int res = decode_base64(base64in, output);
 				if (file.isOpen())
 				{
 					int wres = file.write(output, res);
@@ -177,20 +332,20 @@ void CFileManager::WriteFile(JsonObject& jo)
 	}
 }
 
-void CFileManager::ParseJson(JsonObject& jo)
+void CFileManager::ParseJson(JsonObject jo)
 {
 	Log.debug("CFileManager::ParseJson()");
-	String action = jo[jKeyAction];
-	if (action.equals(jValueGet))
+	const char * action = jo[jKeyAction];
+	if (strcmp(action, jValueGet) == 0)
 	{
 		ReadFile(jo);
 		return;
 	}
-	if (action.equals(jValueSet))
+	if (strcmp(action, jValueSet) == 0)
 	{
 		WriteFile(jo);
 		return;
 	}
 }
 
-CFileManager FileManager(SD_PIN, SPI_HALF_SPEED);
+CFileManager FileManager(SD_PIN);

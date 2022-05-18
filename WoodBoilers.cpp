@@ -1,10 +1,22 @@
-#include "WoodBoiler.h"
+#include "WoodBoilers.h"
 
+const int CWoodBoilers::CURRENT_CONFIG_VERSION = 3;
+const VersionInfo CWoodBoilers::VINFO = { 'W', 'D', 'B', CURRENT_CONFIG_VERSION };
+const char* CWoodBoilers::CFG_FILE = "woodblr.cfg";
 
-//KatilasClass Katilas;
 
 CWoodBoiler::CWoodBoiler(void)
 {
+	Reset();
+}
+
+CWoodBoiler::~CWoodBoiler(void)
+{
+}
+
+void CWoodBoiler::Reset()
+{
+	Events::Reset();
 	opmodeswitch = NULL;
 	burnmodeswitch = NULL;
 	waterboiler = NULL;
@@ -18,10 +30,9 @@ CWoodBoiler::CWoodBoiler(void)
 	status = STATUS_KATILAS_UNKNOWN;
 	exhaustfan_status = STATUS_EXHAUSTFAN_OFF;
 	ladomat_status = STATUS_LADOMAT_OFF;
-	lastcheck = -30000;
+	lastcheck = 0;
 	temp_array_check = 0;
-	//relay = RelayModule::getInstance();
-	working_temp = 75.0;
+	working_temp = 85.0;
 	histeresis = 2.0;
 	chimneytemp = 20.0;
 	watertemp = 20.0;
@@ -39,33 +50,35 @@ CWoodBoiler::CWoodBoiler(void)
 	ladom_manual = false;
 	exhaust_man_start = 0;
 	ladom_man_start = 0;
+
+	exhaust_disabled = false;
+	exhaust_ctrl_enabled = false;
+	exhaust_last_state = false;
+
 	temp_status = TS_Stable;
 	temp_array_add = true;
-	for(byte i=0; i < TEMP_ARRAY_SIZE; i++){
+	for(uint8_t i=0; i < TEMP_ARRAY_SIZE; i++){
 		temp_array[i] = -55.5;
-	}
-	StartingPhase();
+	}	
 	katilasInfoTime = 0;
 
 	opmodeswitch = NULL;
 	burnmodeswitch = NULL;
-}
 
-CWoodBoiler::~CWoodBoiler(void)
-{
+	StartingPhase();
 }
 
 void CWoodBoiler::Begin()
 {
 	TimeSlice.RegisterTimeSlice(this);
 
-	opmodeswitch = Switches.GetByName(SWITCH_NAMES[0].c_str());
+	opmodeswitch = Switches.GetByName(SWITCH_NAMES[0]);
 	if (opmodeswitch != NULL)
 	{
 		opmodeswitch->AddStatusChangeHandler(this);
 		HandleStatusChange(opmodeswitch, opmodeswitch->GetStatus());
 	}
-	burnmodeswitch = Switches.GetByName(SWITCH_NAMES[3].c_str());
+	burnmodeswitch = Switches.GetByName(SWITCH_NAMES[3]);
 	//burnmodeswitch->AddStatusChangeHandler(this);
 }
 
@@ -73,7 +86,9 @@ bool CWoodBoiler::SetSimulationMode(bool value)
 {
 	if(value && watertemp >= working_temp + 2.0)
 	{
-		Log.debug("Simulation disabled because water_temp is too high: "+String(watertemp));
+		char s[64];
+		snprintf(s, 64, "Simulation disabled because water_temp is too high: %.1f", watertemp);
+		Log.debug(s);
 		return false;
 	}
 	if(value && !simulation)
@@ -90,7 +105,7 @@ bool CWoodBoiler::SetSimulationMode(bool value)
 		DoBoilerRoutine();
 		return true;
 	}
-	Log.debug("Unknown simulation error.");
+	Log.error("Unknown simulation error.");
 	return false;
 }
 
@@ -154,7 +169,9 @@ void CWoodBoiler::DoBoilerRoutine()
 			Phase1();
 			break;
 		default:
-			Log.debug("KatilasClass::DoBoilerRoutine() - Nezinoma bukle!!! Status: " +Events::GetStatusName(status));
+			char s[128];
+			sprintf(s, "KatilasClass::DoBoilerRoutine() - Nezinoma bukle!!! Status: %s", Events::GetStatusName(status));
+			Log.debug(s);
 			break;
 		}
 }
@@ -176,12 +193,33 @@ void CWoodBoiler::HandleTemperatureChange(void* Sender, float temp)
 			else
 			{
 				watertemp = temp;
+				CAlarm* al = Alarms.GetByConfigPos(0);
+				if (al)
+					al->SetCurrentTemperature(watertemp);
 			}
 			lastcheck = millis();
 			DoBoilerRoutine();
 		}
-	}else if(Sender == chimneytempsens){
+	}
+	else if(Sender == chimneytempsens)
+	{
 		chimneytemp = temp;
+		if (exhaust_ctrl_enabled)
+		{
+			if (chimneytemp >= 260.0f && !exhaust_disabled)
+			{				
+				VentOff();
+				exhaust_disabled = true;
+			}
+			if (chimneytemp <= 200.0f && exhaust_disabled)
+			{
+				exhaust_disabled = false;
+				if (exhaust_last_state)
+				{
+					VentOn();
+				}
+			}
+		}
 	}
 }
 
@@ -252,11 +290,11 @@ void CWoodBoiler::SwitchBurnMode(BurnMode new_mode)
 
 void CWoodBoiler::AddTempArray(float value){
 	if(temp_array[TEMP_ARRAY_SIZE-1] == -55.5){//starting
-		for(byte i=0; i<TEMP_ARRAY_SIZE; i++){
+		for(uint8_t i=0; i<TEMP_ARRAY_SIZE; i++){
 			temp_array[i] = value;
 		}
 	}else{
-		for(byte i=1; i < TEMP_ARRAY_SIZE; i++){
+		for(uint8_t i=1; i < TEMP_ARRAY_SIZE; i++){
 			temp_array[i-1] = temp_array[i];
 		}
 		temp_array[TEMP_ARRAY_SIZE-1] = value;
@@ -264,16 +302,16 @@ void CWoodBoiler::AddTempArray(float value){
 	//calculate temp_status
 	float t1 = 0;
 	float t2 = 0;
-	byte c1 = 0;
-	byte c2 = 0;
+	uint8_t c1 = 0;
+	uint8_t c2 = 0;
 
-	for(byte i=0; i < TEMP_ARRAY_SIZE / 2; i++){
+	for(uint8_t i=0; i < TEMP_ARRAY_SIZE / 2; i++){
 		float t = temp_array[i];
 			t1 += t;
 			c1++;
 	}
 
-	for(byte i=TEMP_ARRAY_SIZE / 2; i < TEMP_ARRAY_SIZE; i++){
+	for(uint8_t i=TEMP_ARRAY_SIZE / 2; i < TEMP_ARRAY_SIZE; i++){
 		float t = temp_array[i];
 			t2 += t;
 			c2++;
@@ -313,8 +351,11 @@ void CWoodBoiler::SetTempSensor(TempSensor* sensor)
 		watertempsens->RemoveTempChangeHandler(this);
 	}
 	watertempsens = sensor;
-	if(watertempsens){
-		Log.debug("Katilas TSensor set: "+String(sensor->getName()));
+	if(watertempsens)
+	{
+		char s[64];
+		snprintf(s, 64, "Katilas TSensor set: %s", sensor->getName());
+		Log.debug(s);
 		watertempsens->AddTempChangeHandler(this);
 		HandleTemperatureChange(watertempsens, watertempsens->getTemp());
 	}
@@ -328,8 +369,11 @@ void CWoodBoiler::SetKTypeSensor(MAX31855* sensor)
 		chimneytempsens->RemoveTempChangeHandler(this);
 	}
 	chimneytempsens = sensor;
-	if(chimneytempsens){
-		Log.debug("Katilas KType Sensor set: "+String(sensor->GetName()));
+	if(chimneytempsens)
+	{
+		char s[64];
+		snprintf(s, 64, "Katilas KType Sensor set: %s", sensor->GetName());
+		Log.debug(s);
 		chimneytempsens->AddTempChangeHandler(this);
 		chimneytemp = chimneytempsens->GetTemp();
 		chimneytem_enabled = true;
@@ -350,7 +394,7 @@ void CWoodBoiler::SetWaterBoiler(CWaterBoiler* b)
 	waterboiler = b;
 }
 
-void CWoodBoiler::SetLadomatChannel(byte idx)
+void CWoodBoiler::SetLadomatChannel(uint8_t idx)
 {
 	ladom_channel = idx;
 	if(ladom_on && ladom_channel != 0xFF){		
@@ -361,7 +405,7 @@ void CWoodBoiler::SetLadomatChannel(byte idx)
 	}
 }
 
-void CWoodBoiler::SetExhaustFanChannel(byte idx)
+void CWoodBoiler::SetExhaustFanChannel(uint8_t idx)
 {
 	exhaustfan_channel = idx;
 	if(exhaust_on && exhaustfan_channel != 0xFF){		
@@ -379,11 +423,12 @@ float CWoodBoiler::GetCurrentTemp()
 
 void CWoodBoiler::SetWorkingTemp(float work_temp)
 {
-	working_temp = work_temp / 100.0;
+	working_temp = work_temp;
 }
 
-void CWoodBoiler::SetHisteresis(float temp){
-	histeresis = temp / 100.0;
+void CWoodBoiler::SetHisteresis(float temp)
+{
+	histeresis = temp;
 }
 
 void CWoodBoiler::SetLadomatTemp(float ltemp)
@@ -472,7 +517,7 @@ void CWoodBoiler::ChangeExhaustFanManual(){
 	}else{//start vent
 		exhaust_man_start = millis();
 		exhaust_manual = true;		
-		ChangeExhaustFanStatus(STATUS_EXHAUST_MANUAL);
+		ChangeExhaustFanStatus(STATUS_EXHAUSTFAN_MANUAL);
 		if (!exhaust_on && exhaustfan_channel != 0xFF) {
 			RelayModules.OpenChannel(exhaustfan_channel);
 		}
@@ -503,20 +548,23 @@ void CWoodBoiler::ChangeLadomatManual(){
 }
 
 void CWoodBoiler::LadomOn()
-{
+{	
 	if(ladom_on) return;
 	ladom_on = true;
-	if(ladom_channel != 0xFF){		
+	if(ladom_channel != 0xFF)
+	{		
 		ChangeLadomatStatus(STATUS_LADOMAT_ON);
 		RelayModules.OpenChannel(ladom_channel);		
 	}
 }
 
 void CWoodBoiler::LadomOff()
-{
+{	
 	if(!ladom_on) return;
+	exhaust_last_state = false;
 	ladom_on = false;
-	if(ladom_channel != 0xFF && !ladom_manual){		
+	if(ladom_channel != 0xFF && !ladom_manual)
+	{
 		ChangeLadomatStatus(STATUS_LADOMAT_OFF);
 		RelayModules.CloseChannel(ladom_channel);
 	}
@@ -524,10 +572,13 @@ void CWoodBoiler::LadomOff()
 
 void CWoodBoiler::VentOn()
 {
+	exhaust_last_state = true;
+	if (exhaust_disabled) return;
 	if(exhaust_on) return;
 	exhaust_on = true;
 	exhaust_start = millis();
-	if(exhaustfan_channel != 0xFF){		
+	if(exhaustfan_channel != 0xFF)
+	{	
 		ChangeExhaustFanStatus(STATUS_EXHAUSTFAN_ON);
 		RelayModules.OpenChannel(exhaustfan_channel);
 	}
@@ -535,9 +586,11 @@ void CWoodBoiler::VentOn()
 
 void CWoodBoiler::VentOff()
 {
+	if (exhaust_disabled) return;
 	if(!exhaust_on) return;
 	exhaust_on = false;
-	if(exhaustfan_channel != 0xFF && !exhaust_manual){
+	if(exhaustfan_channel != 0xFF && !exhaust_manual)
+	{
 		ChangeExhaustFanStatus(STATUS_EXHAUSTFAN_OFF);
 		RelayModules.CloseChannel(exhaustfan_channel);
 	}
@@ -547,7 +600,6 @@ void CWoodBoiler::ChangeExhaustFanStatus(Status newStatus)
 {
 	exhaustfan_status = newStatus;
 	PrintExhaustFanStatus();
-	Log.info("KATILAS: Status: " +Events::GetStatusName(exhaustfan_status));
 	DispatchStatusChange(this, exhaustfan_status);
 }
 
@@ -555,7 +607,6 @@ void CWoodBoiler::ChangeLadomatStatus(Status newStatus)
 {
 	ladomat_status = newStatus;
 	PrintLadomatStatus();
-	Log.info("KATILAS: Status: " +Events::GetStatusName(ladomat_status));
 	DispatchStatusChange(this, ladomat_status);
 }
 
@@ -618,7 +669,7 @@ void CWoodBoiler::EnterPhase2()
 			}
 		}
 	}
-	//Jungiam ladomata ir ventiliatoriu
+	//Jungiam ventiliatoriu
 	if(exhaust_manual) exhaust_manual = false;
 	VentOn();
 
@@ -870,39 +921,34 @@ void CWoodBoiler::Phase4()//Gesta
 	}
 }
 
-String CWoodBoiler::GetInfoString(){
-	String info = "INFO: KATILAS: FullInfo: "+GetStatusName(status)+" " + String((int)(watertemp*100))+" "+String(ladom_on)+" "+String(ladom_manual)+" "+String(exhaust_on)+" "+String(exhaust_manual)+" "+String(temp_status);
-	return info;
-}
-
-String CWoodBoiler::getTempStatusString(){
+const char* CWoodBoiler::getTempStatusString(){
 	switch (temp_status)
 	{
 	case TS_GrowingFast:
-		return "GrowingFast";
+		return cTS_GrowingFast;
 		break;
 	case TS_Growing:
-		return "Growing";
+		return cTS_Growing;
 		break;
 	case TS_Stable:
-		return "Stable";
+		return cTS_Stable;
 		break;
 	case TS_Lowering:
-		return "Lowering";
+		return cTS_Lowering;
 		break;
 	case TS_LoweringFast:
-		return "LoweringFast";
+		return cTS_LoweringFast;
 		break;
 	default:
-		return "Unknown";
+		return cTS_Default;
 		break;
 	}
 }
 
 void CWoodBoiler::PrintWoodBoilerStatus()
 {
-	StaticJsonBuffer<512> jBuff;
-	JsonObject& root = jBuff.createObject();
+	DynamicJsonDocument jBuff(512);
+	JsonObject root = jBuff.to<JsonObject>();
 	root[jKeyTarget] = jTargetWoodBoiler;
 	root[jKeyAction] = jValueInfo;
 	root[jKeyName] = name;
@@ -915,8 +961,8 @@ void CWoodBoiler::PrintWoodBoilerStatus()
 
 void CWoodBoiler::PrintLadomatStatus()
 {
-	StaticJsonBuffer<512> jBuff;
-	JsonObject& root = jBuff.createObject();
+	DynamicJsonDocument jBuff(512);
+	JsonObject root = jBuff.to<JsonObject>();
 	root[jKeyTarget] = jTargetWoodBoiler;
 	root[jKeyAction] = jValueInfo;
 	root[jKeyName] = name;
@@ -927,8 +973,8 @@ void CWoodBoiler::PrintLadomatStatus()
 
 void CWoodBoiler::PrintExhaustFanStatus()
 {
-	StaticJsonBuffer<512> jBuff;
-	JsonObject& root = jBuff.createObject();
+	DynamicJsonDocument jBuff(512);
+	JsonObject root = jBuff.to<JsonObject>();
 	root[jKeyTarget] = jTargetWoodBoiler;
 	root[jKeyAction] = jValueInfo;
 	root[jKeyName] = name;
@@ -937,37 +983,25 @@ void CWoodBoiler::PrintExhaustFanStatus()
 	PrintJson.Print(root);
 }
 
-void CWoodBoiler::ParseJson(JsonObject& jo)
+void CWoodBoiler::ParseJson(JsonObject jo)
 {
 
 }
 
-byte CWoodBoiler::FillWoodBoilerData(WoodBoilerData &data)
+void CWoodBoiler::ApplyConfig(uint8_t cfgPos, const WoodBoilerData &data)
 {
-	data.Valid = 1;
-	strncpy(data.Name, name, MAX_NAME_LENGTH);
-	strncpy(data.TSensorName, watertempsens->getName(), MAX_NAME_LENGTH);
-	strncpy(data.KTypeName, chimneytempsens->GetName(), MAX_NAME_LENGTH);
-	data.LadomatChannel = ladom_channel;
-	data.ExhaustFanChannel = exhaustfan_channel;
-	data.WorkingTemp = (int)(working_temp * 100);
-	data.WorkingHisteresis = (int)(histeresis * 100);
-	data.LadomatTemp = (int)(ladomattemp * 100); //<- nauja
-	strncpy(data.LadomatTempTriggerName, ladomat_trigger->GetName(), MAX_NAME_LENGTH); // <- nauja
-	return 0;//dbid
-}
-
-void CWoodBoiler::SetSettings(WoodBoilerData &data)
-{
+	configPos = cfgPos;
 	SetName(data.Name);
-	SetWorkingTemp(data.WorkingTemp);
-	SetHisteresis(data.WorkingHisteresis);
+	SetWorkingTemp(data.WorkingTemp / 100.0f);
+	SetHisteresis(data.WorkingHisteresis / 100.0f);
 	SetLadomatChannel(data.LadomatChannel);
 	SetExhaustFanChannel(data.ExhaustFanChannel);
 	SetTempSensor(TSensors.getByName(data.TSensorName));
 	SetKTypeSensor(KTypes.GetByName(data.KTypeName));
 	SetLadomatTemp(data.LadomatTemp / 100.0f);
 	SetLadomatTrigger(TempTriggers.GetByName(data.LadomatTempTriggerName));
+	   	  
+	char WaterBoilerName[MAX_NAME_LENGTH]; // <- nauja
 }
 
 /*********************************************
@@ -984,81 +1018,219 @@ CWoodBoiler* CWoodBoilers::GetByName(const char* name)
 	return NULL;
 }
 
-void CWoodBoilers::ParseJson(JsonObject& jo)
+void CWoodBoilers::Begin()
 {
-	if (jo.containsKey(jKeyName))
+	for (int i = 0; i < Count(); i++)
 	{
-		CWoodBoiler* wb = GetByName(jo[jKeyName]);
-		if (wb)
+		CWoodBoiler* boiler = Get(i);
+		if (boiler) boiler->Begin();
+	}
+}
+
+void CWoodBoilers::Reset()
+{
+	for (int i = 0; i < Count(); i++)
+	{
+		CWoodBoiler* boiler = Get(i);
+		if (boiler) boiler->Reset();
+	}
+}
+
+void CWoodBoilers::LoadConfig(void)
+{
+	switch (FileManager.OpenConfigFile(CFG_FILE, VINFO))
+	{
+	case FileStatus_OK:
+		for (size_t i = 0; i < MAX_WOOD_BOILERS_COUNT; i++)
 		{
-			if (jo.containsKey(jKeyAction))
+			WoodBoilerData data;
+			if (FileManager.FileReadBuffer(&data, sizeof(data)))
 			{
-				String action = jo[jKeyAction];
-				if (action.equals(jWoodBoilerActionIkurimas))
+				if (data.Valid)
 				{
-					wb->EnterPhase2();
-					return;
+					CWoodBoiler* wdb = Add();
+					if (wdb)
+					{
+						wdb->ApplyConfig(i, data);
+					}
 				}
-				if (action.equals(jWoodBoilerActionSwitch))
+			}
+			else
+			{
+				//Read error
+				char s[64];
+				sprintf(s, "WoodBoiler config file read error. Pos: %d", i);
+				Log.error(s);
+			}
+		}
+		FileManager.FileClose();
+		break;
+	case FileStatus_ReCreate:
+		//FilePos at end of header
+		Log.error("Writing defaults...");
+		for (size_t i = 0; i < MAX_WOOD_BOILERS_COUNT; i++)
+		{
+			const WoodBoilerData& data = Defaults.GetDefaultWoodBoilerData(i);
+			if (FileManager.FileWriteBuff(&data, sizeof(data)))
+			{
+				if (data.Valid)
 				{
-					String target = jo[jKeyValue];
-					if (target.equals(jWoodBoilerTargetExhaust))
+					CWoodBoiler* wdb = Add();
+					if (wdb)
 					{
-						wb->ChangeExhaustFanManual();
+						wdb->ApplyConfig(i, data);
 					}
-					else if (target.equals(jWoodBoilerTargetLadomat))
-					{
-						wb->ChangeLadomatManual();
-					}
-					return;
 				}
-				if (action.equals(jKeySetup))
+			}
+			else
+			{
+				char s[64];
+				sprintf(s, "WoodBoiler config file write defaults error. Pos: %d", i);
+				Log.error(s);
+			}
+		}
+		FileManager.FileClose();
+		break;
+	case FileStatus_RWError:
+	case FileStatus_Inaccessible:
+		Log.error("SD inaccessible or Read/Write error. Reading defaults...");
+		for (size_t i = 0; i < MAX_WOOD_BOILERS_COUNT; i++)
+		{
+			const WoodBoilerData& data = Defaults.GetDefaultWoodBoilerData(i);
+			if (data.Valid)
+			{
+				CWoodBoiler* wdb = Add();
+				if (wdb)
 				{
-					WoodBoilerData data;
-					byte pos = wb->FillWoodBoilerData(data);
-					if (jo.containsKey(jKeyName))
-					{
-						strncpy(data.Name, jo[jKeyName], MAX_NAME_LENGTH);
-					}
-					if (jo.containsKey(jWoodBoilerTempSensorName))
-					{
-						strncpy(data.TSensorName, jo[jWoodBoilerTempSensorName], MAX_NAME_LENGTH);
-					}
-					if (jo.containsKey(jWoodBoilerKTypeName))
-					{
-						strncpy(data.KTypeName, jo[jWoodBoilerKTypeName], MAX_NAME_LENGTH);
-					}
-					if (jo.containsKey(jWoodBoilerLadomatChannel))
-					{
-						data.LadomatChannel = jo[jWoodBoilerLadomatChannel];
-					}
-					if (jo.containsKey(jWoodBoilerExhaustFanChannel))
-					{
-						data.ExhaustFanChannel = jo[jWoodBoilerExhaustFanChannel];
-					}
-					if (jo.containsKey(jWoodBoilerWorkingTemp))
-					{
-						data.WorkingTemp = (int)((float)jo[jWoodBoilerWorkingTemp] * 100);
-					}
-					if (jo.containsKey(jWoodBoilerHisteresis))
-					{
-						data.WorkingHisteresis = (int)((float)jo[jWoodBoilerHisteresis] * 100);
-					}
-					if (jo.containsKey(jWoodBoilerLadomatWorkingTemp))
-					{
-						data.LadomatTemp = (int)((float)jo[jWoodBoilerLadomatWorkingTemp] * 100);
-					}
-					if (jo.containsKey(jWoodBoilerLadomatTriggerName))
-					{
-						strncpy(data.LadomatTempTriggerName, jo[jWoodBoilerLadomatTriggerName], MAX_NAME_LENGTH);
-					}
-					Settings.setWoodBoilerData(pos, data);
-					wb->SetSettings(data);
-					PrintJson.PrintResultOk(jTargetWoodBoiler, jKeySetup);
+					wdb->ApplyConfig(i, data);
 				}
 			}
 		}
+		break;
+	default:
+		break;
 	}
+}
+
+bool CWoodBoilers::GetConfigData(uint8_t cfgPos, WoodBoilerData & data)
+{
+	if (FileManager.OpenConfigFile(CFG_FILE, VINFO) == FileStatus_OK)
+	{
+		uint32_t fpos = sizeof(VersionInfo) + cfgPos * sizeof(data);
+		if (FileManager.FileSeek(fpos))
+		{
+			if (FileManager.FileReadBuffer(&data, sizeof(data)))
+			{
+				FileManager.FileClose();
+				return true;
+			}
+		}
+		FileManager.FileClose();
+	}
+	return false;
+}
+
+bool CWoodBoilers::ValidateSetupDataSet(JsonObject & jo)
+{
+	return jo.containsKey(jKeyConfigPos) &&
+		jo.containsKey(jKeyName) &&
+		jo.containsKey(jWoodBoilerTempSensorName) &&
+		jo.containsKey(jWoodBoilerKTypeName) &&
+		jo.containsKey(jWoodBoilerLadomatChannel) &&
+		jo.containsKey(jWoodBoilerExhaustFanChannel) &&
+		jo.containsKey(jWoodBoilerWorkingTemp) &&
+		jo.containsKey(jWoodBoilerHisteresis) &&
+		jo.containsKey(jWoodBoilerLadomatWorkingTemp) &&
+		jo.containsKey(jWoodBoilerLadomatTriggerName) &&
+		jo.containsKey(jWoodBoilerWBName);
+}
+
+void CWoodBoilers::ParseJson(JsonObject& jo)
+{
+	if (jo.containsKey(jKeyAction))
+	{
+		const char * action = jo[jKeyAction];
+		if (strcmp(action, jWoodBoilerActionIkurimas) == 0)
+		{
+			if (jo.containsKey(jKeyName))
+			{
+				CWoodBoiler* wb = GetByName(jo[jKeyName]);
+				if (wb)
+				{
+					wb->EnterPhase2();
+				}
+			}
+			else
+			{
+				PrintJson.PrintResultError(jTargetWoodBoiler, jErrorInvalidDataSet);
+			}
+		}
+		if (strcmp(action, jWoodBoilerActionSwitch) == 0)
+		{
+			if (jo.containsKey(jKeyName))
+			{
+				CWoodBoiler* wb = GetByName(jo[jKeyName]);
+				if (wb)
+				{
+					const char * target = jo[jKeyValue];
+					if (strcmp(target, jWoodBoilerTargetExhaust) == 0)
+					{
+						wb->ChangeExhaustFanManual();
+					}
+					else if (strcmp(target, jWoodBoilerTargetLadomat) == 0)
+					{
+						wb->ChangeLadomatManual();
+					}
+				}
+			}
+			else
+			{
+				PrintJson.PrintResultError(jTargetWoodBoiler, jErrorInvalidDataSet);
+			}
+		}
+		if (strcmp(action, jKeySetup) == 0)
+		{
+			if (ValidateSetupDataSet(jo))
+			{
+				WoodBoilerData data;
+				uint8_t cfgPos = jo[jKeyConfigPos];
+				Utilities::ClearAndCopyString(jo[jKeyName], data.Name);
+				Utilities::ClearAndCopyString(jo[jWoodBoilerTempSensorName], data.TSensorName);
+				Utilities::ClearAndCopyString(jo[jWoodBoilerKTypeName], data.KTypeName);
+				data.LadomatChannel = jo[jWoodBoilerLadomatChannel];
+				data.ExhaustFanChannel = jo[jWoodBoilerExhaustFanChannel];
+				data.WorkingTemp = (int)((float)jo[jWoodBoilerWorkingTemp] * 100);
+				data.WorkingHisteresis = (int)((float)jo[jWoodBoilerHisteresis] * 100);
+				data.LadomatTemp = (int)((float)jo[jWoodBoilerLadomatWorkingTemp] * 100);
+				Utilities::ClearAndCopyString(jo[jWoodBoilerLadomatTriggerName], data.LadomatTempTriggerName);
+				Utilities::ClearAndCopyString(jo[jWoodBoilerWBName], data.WaterBoilerName);
+
+				uint32_t fpos = sizeof(VersionInfo) + cfgPos * sizeof(data);
+				if (FileManager.OpenConfigFile(CFG_FILE, VINFO) == FileStatus_OK)
+				{
+					if (FileManager.FileSeek(fpos))
+					{
+						if (FileManager.FileWriteBuff(&data, sizeof(data)))
+						{
+							FileManager.FileClose();
+							SystemStatus.SetRebootRequired();
+							PrintJson.PrintResultOk(jTargetWoodBoiler, jKeySetup, true);
+							return;
+						}
+					}
+					PrintJson.PrintResultError(jTargetWoodBoiler, jErrorFileWriteError);
+					return;
+				}
+				PrintJson.PrintResultError(jTargetWoodBoiler, jErrorFileOpenError);
+				return;
+			}
+		}
+	}
+	else
+	{
+		PrintJson.PrintResultFormatError();
+	}
+	
 }
 
 CWoodBoilers WoodBoilers;

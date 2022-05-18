@@ -2,10 +2,13 @@
 #define Utilities_h
 
 #include "Logger.h"
+#include "consts.h"
 
 class Utilities
 {
 public:
+	static void clearString(char* str, uint8_t l = MAX_NAME_LENGTH);
+	static void ClearAndCopyString(const char* source, char* dest);
 	static float pround(float value);
 	static float roundFloat(float value, int places);
 	static bool nearEqual(float f1, float f2);
@@ -35,7 +38,7 @@ public:
 		}
 		else 
 		{
-			for (byte i = 1; i < CAPACITY; i++) 
+			for (uint8_t i = 1; i < CAPACITY; i++) 
 			{
 				arr[i - 1] = arr[i];
 				avg += arr[i];
@@ -96,7 +99,7 @@ public:
 		}
 		else
 		{
-			for (byte i = 1; i < CAPACITY; i++)
+			for (uint8_t i = 1; i < CAPACITY; i++)
 			{
 				arr[i - 1] = arr[i];
 				avg += arr[i];

@@ -1,7 +1,7 @@
 #ifndef List_h
 #define List_h
 
-#include <stdlib.h>
+#include <arduino.h>
 
 template<typename T>
 class List
@@ -9,14 +9,14 @@ class List
 public:
 	List(void);
 	~List(void);
-	int Count();
+	uint8_t Count();
 	bool Add(T* item);
-	T* Get(int idx);
-	void Delete(int idx);
+	T* Get(uint8_t idx);
+	void Delete(uint8_t idx);
 	void Delete(T* item);
 	void Clear();
 private:
-	int count;
+	uint8_t count;
 	struct node {
       T* item;      // the item in the node.
       node * next; // the next node in the list.
@@ -42,7 +42,7 @@ List<T>::~List(void)
 }
 
 template<typename T>
-int List<T>::Count()
+uint8_t List<T>::Count()
 {
 	return count;
 }
@@ -53,7 +53,7 @@ bool List<T>::Add(T* item)
 	//Serial.println("DBG: Creating node...");
 	node* n = new node;
 	if(n == NULL){ 
-		//Serial.println("DBG: Node NOT created.");
+		Serial.println("0 DBG: List Node NOT created.");
 		return false; 
 	}
 	//Serial.println("DBG: Node created.");
@@ -64,7 +64,7 @@ bool List<T>::Add(T* item)
 		last->next = n;
 		last = n;
 	}
-	if(!first)
+	else
 	{
 		first = n;
 		last = n;
@@ -74,13 +74,12 @@ bool List<T>::Add(T* item)
 }
 
 template<typename T>
-T* List<T>::Get(int idx)
+T* List<T>::Get(uint8_t idx)
 {
 	if(idx>=0 && idx < count)
 	{
-		node *tmp;
-		tmp = first;
-		int i = 0;
+		node *tmp = first;
+		uint8_t i = 0;
 		while(i != idx)
 		{
 			tmp = tmp->next;
@@ -92,7 +91,7 @@ T* List<T>::Get(int idx)
 }
 
 template<typename T>
-void List<T>::Delete(int idx)
+void List<T>::Delete(uint8_t idx)
 {
 	if(idx>=0 && idx < count)
 	{
@@ -110,7 +109,6 @@ void List<T>::Delete(int idx)
 		{
 			prev->next = tmp->next;
 			if(prev->next == NULL) last = prev;
-			//if(tmp->item) delete tmp->item;
 			delete tmp;
 			count--;
 		}
@@ -118,7 +116,6 @@ void List<T>::Delete(int idx)
 		{
 			tmp = first->next;
 			if(tmp == NULL) last = NULL;
-			//if(first->item) delete first->item;
 			delete first;
 			first = tmp;
 			count--;
@@ -129,31 +126,45 @@ void List<T>::Delete(int idx)
 template<typename T>
 void List<T>::Delete(T* item)
 {
+	if (item == NULL) return;
 	if(count <= 0 ) return;
 
 	node *tmp, *prev;
 	tmp = first;
 	prev = NULL;
 
-	while(tmp->item != item || tmp != NULL)
+	for (uint8_t i = 0; i < count; i++)
 	{
-		prev = tmp;
-		tmp = tmp->next;
-	}
-	if(prev)
-	{
-		prev->next = tmp->next;
-		if(prev->next == NULL) last = prev;
-		delete tmp;
-		count--;
-	}
-	else//deleting first element
-	{
-		tmp = first->next;
-		if(tmp == NULL) last = NULL;
-		delete first;
-		first = NULL;
-		count--;
+		if (tmp != NULL)
+		{
+			if (tmp->item == item)
+			{
+				if (prev)
+				{
+					prev->next = tmp->next;
+					if (prev->next == NULL) last = prev;
+					delete tmp;
+				}
+				else//deleting first element
+				{
+					tmp = first->next;
+					if (tmp == NULL) last = NULL;
+					delete first;
+					first = tmp;
+				}
+				count--;
+				break;
+			}
+			else
+			{
+				prev = tmp;
+				tmp = tmp->next;
+			}
+		}
+		else
+		{
+			break;
+		}
 	}
 }
 
@@ -161,12 +172,15 @@ template<typename T>
 void List<T>::Clear()
 {
 	node* p = first;
-    while ( p!=NULL )
+    while ( p != NULL )
     {
     	node* nextNode = p->next;
     	delete p;
     	p = nextNode;
     }
+	count = 0;
+	first = NULL;
+	last = NULL;
 }
 
 #endif

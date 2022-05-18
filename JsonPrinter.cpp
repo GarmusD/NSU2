@@ -1,6 +1,6 @@
 #include "JsonPrinter.h"
 
-
+#include "SystemStatus.h"
 
 JsonPrinter::JsonPrinter()
 {
@@ -18,9 +18,11 @@ void JsonPrinter::Print(JsonObject & jo)
 	{
 		jo[jKeyCmdID] = cmdid;
 	}
-	Log.log("JSON: ", false);
-	jo.printTo(Serial);
-	Log.newLine();
+	Serial.print("0 JSON: ");
+	//Log.log("JSON: ", false);
+	serializeJson(jo, Serial);
+	//Log.newLine();
+	Serial.print('\n'); //Serial.println(void) prints '\r\n'
 	cmdid[0] = 0;
 }
 
@@ -36,8 +38,8 @@ char* JsonPrinter::getCmdID()
 
 void JsonPrinter::PrintResultError(const char * target, const char * errorcode)
 {
-	StaticJsonBuffer<256> jsonBuffer;
-	JsonObject& j = jsonBuffer.createObject();
+	DynamicJsonDocument jsonBuffer(512);
+	JsonObject j = jsonBuffer.to<JsonObject>();
 	j[jKeyTarget] = target;
 	j[jKeyResult] = jValueResultError;
 	j[jKeyMessage] = errorcode;
@@ -50,8 +52,8 @@ void JsonPrinter::PrintResultError(const char * target, const char * errorcode)
 
 void JsonPrinter::PrintResultNull(const char * target)
 {
-	StaticJsonBuffer<128> jsonBuffer;
-	JsonObject& j = jsonBuffer.createObject();
+	DynamicJsonDocument jsonBuffer(512);
+	JsonObject j = jsonBuffer.to<JsonObject>();
 	j[jKeyTarget] = target;
 	j[jKeyResult] = jValueResultNull;
 	if (cmdid[0])
@@ -61,10 +63,10 @@ void JsonPrinter::PrintResultNull(const char * target)
 	Print(j);
 }
 
-void JsonPrinter::PrintResultOk(const char * target, const char * action)
+void JsonPrinter::PrintResultOk(const char * target, const char * action, bool incl_reboot_req)
 {
-	StaticJsonBuffer<128> jsonBuffer;
-	JsonObject& j = jsonBuffer.createObject();
+	DynamicJsonDocument jsonBuffer(512);
+	JsonObject j = jsonBuffer.to<JsonObject>();
 	j[jKeyTarget] = target;
 	if(action && action[0])
 		j[jKeyAction] = action;
@@ -73,13 +75,15 @@ void JsonPrinter::PrintResultOk(const char * target, const char * action)
 	{
 		j[jKeyCmdID] = cmdid;
 	}
+	if(incl_reboot_req)
+		j[jKeySysStatusRebootRequired] = SystemStatus.GetRebootRequired();
 	Print(j);
 }
 
 void JsonPrinter::PrintResultDone(const char * target, const char * action)
 {
-	StaticJsonBuffer<128> jsonBuffer;
-	JsonObject& j = jsonBuffer.createObject();
+	DynamicJsonDocument jsonBuffer(512);
+	JsonObject j = jsonBuffer.to<JsonObject>();
 	j[jKeyTarget] = target;
 	if (action && action[0])
 		j[jKeyAction] = action;
@@ -91,10 +95,25 @@ void JsonPrinter::PrintResultDone(const char * target, const char * action)
 	Print(j);
 }
 
+void JsonPrinter::PrintResultUnknownAction(const char * target, const char * action)
+{
+	DynamicJsonDocument jsonBuffer(512);
+	JsonObject j = jsonBuffer.to<JsonObject>();
+	j[jKeyTarget] = target;
+	if (action && action[0])
+		j[jKeyAction] = action;
+	j[jKeyResult] = jValueResultUnknownAction;
+	if (cmdid[0])
+	{
+		j[jKeyCmdID] = cmdid;
+	}
+	Print(j);
+}
+
 void JsonPrinter::PrintResultFormatError()
 {
-	StaticJsonBuffer<256> jsonBuffer;
-	JsonObject& jo = jsonBuffer.createObject();
+	DynamicJsonDocument jsonBuffer(512);
+	JsonObject jo = jsonBuffer.to<JsonObject>();
 	jo[jKeyTarget] = "system";
 	jo[jKeyAction] = "error";
 	jo[jKeyValue] = "format";
@@ -104,8 +123,8 @@ void JsonPrinter::PrintResultFormatError()
 
 void JsonPrinter::PrintResultNotAJson()
 {
-	StaticJsonBuffer<256> jsonBuffer;
-	JsonObject& jo = jsonBuffer.createObject();
+	DynamicJsonDocument jsonBuffer(512);
+	JsonObject jo = jsonBuffer.to<JsonObject>();
 	jo[jKeyTarget] = "system";
 	jo[jKeyAction] = "error";
 	jo[jKeyValue] = "notjson";
@@ -113,14 +132,15 @@ void JsonPrinter::PrintResultNotAJson()
 	Print(jo);
 }
 
-void JsonPrinter::PrintResultParseError()
+void JsonPrinter::PrintResultParseError(DeserializationError& err)
 {
-	StaticJsonBuffer<256> jsonBuffer;
-	JsonObject& jo = jsonBuffer.createObject();
+	DynamicJsonDocument jsonBuffer(512);
+	JsonObject jo = jsonBuffer.to<JsonObject>();
 	jo[jKeyTarget] = "system";
 	jo[jKeyAction] = "error";
 	jo[jKeyValue] = "parse";
-	jo[jKeyMessage] = "JSon parse error.";
+	jo[jKeyMessage] = err.c_str();
+	
 	Print(jo);
 }
 

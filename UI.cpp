@@ -123,17 +123,17 @@ int UIBase::getWY(int y)//world y
 	return y+r.Top;
 }
 
-void UIBase::SetFlag(byte flag)
+void UIBase::SetFlag(uint8_t flag)
 {
 	bitSet(flags, flag);
 }
 
-void UIBase::ClearFlag(byte flag)
+void UIBase::ClearFlag(uint8_t flag)
 {
 	bitClear(flags, flag);
 }
 
-bool UIBase::FlagIsSet(byte flag)
+bool UIBase::FlagIsSet(uint8_t flag)
 {
 	return bitRead(flags, flag);
 }
@@ -150,7 +150,10 @@ void UIBase::Invalidate()
 		return;
 	}
 	invalidated = false;
-	Draw();
+	if (FlagIsSet(I_AM_PAINTED))
+	{
+		Draw();
+	}	
 }
 
 UIClass UIBase::getUIClass()
@@ -168,7 +171,7 @@ void UIBase::SetUIID(const char* id)
 	strlcpy(uiid, id, MAX_UUID_LENGTH);
 }
 
-void UIBase::SetFont(const byte* fnt)
+void UIBase::SetFont(const uint8_t* fnt)
 {
 	Font = fnt;
 	FontHeight = fonts.GetFontHeight(Font);
@@ -289,20 +292,12 @@ void UIButton::SetCaption(const char *text)
 	lbl.SetCaption(text);
 }
 
-void UIButton::SetCaption(String str)
-{
-	lbl.SetCaption(str);
-}
-
 void UIButton::SetPosition(int x, int y)
 {
 	this->x = x;
 	this->y = y;
 	setLabelPosition();
-	if(FlagIsSet(I_AM_PAINTED))
-	{
-		Invalidate();
-	}
+	Invalidate();
 }
 
 void UIButton::SetSize(int w, int h)
@@ -310,17 +305,14 @@ void UIButton::SetSize(int w, int h)
 	this->w = w;
 	this->h = h;
 	setLabelPosition();
-	if(FlagIsSet(I_AM_PAINTED))
-	{
-		Invalidate();
-	}
+	Invalidate();
 }
 
 void UIButton::setLabelPosition()
 {
-	byte marginy = ceil( (h - lbl.FontHeight) / 2 );
+	uint8_t marginy = ceil( (h - lbl.FontHeight) / 2 );
 	if(marginy < margin) marginy = margin;
-	byte marginx = margin;
+	uint8_t marginx = margin;
 	int lx = x + marginx;
 	int ly = y + marginy-1;
 	lbl.SetPosition(lx, ly);
@@ -333,10 +325,7 @@ void UIButton::SetColor(RGBColor fclr, RGBColor bclr, RGBColor brdrclr)
 	b_clr = bclr;
 	brdr_clr = brdrclr;
 	lbl.SetColor(f_clr, b_clr);
-	if(FlagIsSet(I_AM_PAINTED))
-	{
-		Invalidate();
-	}
+	Invalidate();
 }
 
 void UIButton::SetEnabled(bool value)
@@ -350,11 +339,14 @@ void UIButton::SetEnabled(bool value)
 	{
 		lbl.SetColor(f_clr, BtnDisabledColor);
 	}
-	if(FlagIsSet(I_AM_PAINTED)) Invalidate();
+	Invalidate();
 }
 
 void UIButton::Draw()
 {
+	if (!window->IsActive())
+		return;
+
 	if(!enabled)
 	{
 		if(!transparent){
@@ -428,7 +420,7 @@ void UIInput::SetCaption(const char* text)
 	cursor.turnoff();
 	label.SetCaption(text);
 	cursor.SetPosition(cx+label.GetCaptionWidth()+1, cy);
-	if(FlagIsSet(I_AM_PAINTED)) Invalidate();
+	Invalidate();
 }
 
 const char* UIInput::GetCaption()
@@ -444,7 +436,7 @@ void UIInput::SetMaxChars(int max)
 void UIInput::AddChar(char c)
 {
 	//char *tmp = label.GetCaption();
-	//byte l = strlen(tmp);
+	//uint8_t l = strlen(tmp);
 	//if( l >= MAX_LABEL_LENGTH-1) return;	
 	//tmp[l] = c;
 	//tmp[l+1] = 0;
@@ -453,7 +445,7 @@ void UIInput::AddChar(char c)
 void UIInput::DelChar()
 {
 	//char *tmp = label.GetCaption();
-	//byte l = strlen(tmp);
+	//uint8_t l = strlen(tmp);
 	//if(l == 0) return;
 	//tmp[l-1] = 0;
 }
@@ -473,7 +465,7 @@ void UIInput::SetColor(RGBColor clr)
 	fclr = clr;
 	label.SetColor(fclr, bclr);
 	cursor.setFaceColor(fclr);
-	if(FlagIsSet(I_AM_PAINTED)) Invalidate();
+	Invalidate();
 }
 
 void UIInput::SetBackColor(RGBColor clr)
@@ -481,7 +473,7 @@ void UIInput::SetBackColor(RGBColor clr)
 	bclr = clr;
 	label.SetColor(fclr, bclr);
 	cursor.setBgColor(bclr);
-	if(FlagIsSet(I_AM_PAINTED)) Invalidate();
+	Invalidate();
 }
 
 void UIInput::SetPosition(int x, int y)
@@ -489,7 +481,7 @@ void UIInput::SetPosition(int x, int y)
 	this->x = x;
 	this->y = y;
 	setLabelPosition();
-	if(FlagIsSet(I_AM_PAINTED)) Invalidate();
+	Invalidate();
 }
 
 void UIInput::SetSize(int w, int h)
@@ -498,13 +490,13 @@ void UIInput::SetSize(int w, int h)
 	this->w = w;
 	this->h = h;
 	setLabelPosition();
-	if(FlagIsSet(I_AM_PAINTED)) Invalidate();
+	Invalidate();
 }
 
 void UIInput::setLabelPosition()
 {
-	byte marginy = 3;
-	byte marginx = 3;
+	uint8_t marginy = 3;
+	uint8_t marginx = 3;
 	marginy = ceil( (h - FontHeight) / 2 );
 	int lx = x + marginx;
 	int ly = y + marginy-1;
@@ -517,6 +509,9 @@ void UIInput::setLabelPosition()
 
 void UIInput::Draw()
 {
+	if (!window->IsActive())
+		return;
+
 	int wx = getWX(x);
 	int wy = getWY(y);
 	window->GetUTFT().setColor(bclr.R, bclr.G, bclr.B);
@@ -571,17 +566,12 @@ UILabel::~UILabel()
 {
 }
 
-void UILabel::SetCaption(String str)
-{
-	SetCaption(str.c_str());
-}
-
 void UILabel::SetCaption(const char *text)
 {
 	uint len = strlen(text);
 	if (len > MAX_LABEL_LENGTH) len = MAX_LABEL_LENGTH;
 	int strw = fonts.GetTextArrayWidth(text, Font);
-	if(strw > w)//String is longer when allocated width, truncating
+	if(strw > w)//string is longer when allocated width, truncating
 	{		
 		int cw, neww = 0, captidx = 0, csp;
 		csp = fonts.GetCharSpacing();
@@ -661,10 +651,7 @@ void UILabel::SetCaption(const char *text)
 	default:
 		break;
 	}
-	if(FlagIsSet(I_AM_PAINTED))
-	{
-		Invalidate();
-	}
+	Invalidate();
 }
 
 const char* UILabel::GetCaption()
@@ -683,7 +670,7 @@ void UILabel::SetColor(RGBColor faceClr, RGBColor backClr)
 	bclr = backClr;
 }
 
-void UILabel::SetFont(const byte* fnt)
+void UILabel::SetFont(const uint8_t* fnt)
 {
 	Font = fnt;
 	FontHeight = fonts.GetFontHeight(fnt);
@@ -692,6 +679,9 @@ void UILabel::SetFont(const byte* fnt)
 
 void UILabel::Draw()
 {
+	if (!window->IsActive())
+		return;
+	//Log.debug("UILabel::Draw() - Window ACTIVE. OK.");
 	int wx = getWX(x);
 	int wy = getWY(y);
 	if(interval1.width > 0)
@@ -764,6 +754,9 @@ void UITempLabel::SetPosition(int x, int y)
 
 void UITempLabel::Draw()
 {
+	if (!window->IsActive())
+		return;
+
 	UILabel::Draw();
 	window->GetUTFT().setColor(WindowBorderColor.R, WindowBorderColor.G, WindowBorderColor.B);
 	window->GetUTFT().drawRect(getWX(x)-3, getWY(y)-3, getWX(x)+w+6, getWY(y)+FontHeight+6);
@@ -850,14 +843,14 @@ void UIImgButton::SetBMPBytes(const unsigned short *data)
 		w = bmpdata[0];
 		h = bmpdata[1];
 	}
-	if(FlagIsSet(I_AM_PAINTED))
-	{
-		Draw();
-	}
+	Invalidate();
 }
 
 void UIImgButton::Draw()
 {
+	if (!window->IsActive())
+		return;
+
 	fonts.DrawColorBitmap(getWX(x), getWY(y), bmpdata);
 	UIButton::Draw();
 }
@@ -881,22 +874,22 @@ UIGraphics::~UIGraphics()
 void UIGraphics::SetColor(RGBColor color)
 {
 	clr = color;
-	if(FlagIsSet(I_AM_PAINTED)) Invalidate();
+	Invalidate();
 }
 
 void UIGraphics::SetBackColor(RGBColor color)
 {
 	bclr = color;
-	if(FlagIsSet(I_AM_PAINTED)) Invalidate();
+	Invalidate();
 }
 
-void UIGraphics::SetGraphicsBytes(byte* buf)
+void UIGraphics::SetGraphicsBytes(uint8_t* buf)
 {
 	isVector = false;
 	buffer = buf;
 }
 
-void UIGraphics::SetVectorBytes(byte* buf)
+void UIGraphics::SetVectorBytes(uint8_t* buf)
 {
 	isVector = true;
 	buffer = buf;
@@ -904,6 +897,9 @@ void UIGraphics::SetVectorBytes(byte* buf)
 
 void UIGraphics::Draw()
 {
+	if (!window->IsActive())
+		return;
+
 	window->GetUTFT().setBackColor(bclr.R, bclr.G, bclr.B);
 	window->GetUTFT().setColor(clr.R, clr.G, clr.B);
 	if (isVector)
@@ -958,11 +954,14 @@ void UITempBar::SetTemperatures(float temp1, float temp2, float temp3)
 	t2 = temp2;
 	t3 = temp3;
 	calculate();
-	Draw();
+	Invalidate();
 }
 
 void UITempBar::Draw()
 {
+	if (!window->IsActive())
+		return;
+
 	int wx = getWX(x);
 	int wy = getWY(y);
 	window->GetUTFT().setColor(WindowBorderColor.R, WindowBorderColor.G, WindowBorderColor.B);
@@ -980,7 +979,7 @@ void UITempBar::Draw()
 	b = b1;
 	for(int i=wy+1; i < middle; i++)
 	{
-		window->GetUTFT().setColor((byte)r, 0, (byte)b);
+		window->GetUTFT().setColor((uint8_t)r, 0, (uint8_t)b);
 		window->GetUTFT().drawLine(wx+1, i, wx+w-1, i);
 		r -= RStep1;
 		b -= BStep1;
@@ -990,11 +989,12 @@ void UITempBar::Draw()
 	b = b2;
 	for(int i=middle; i <= wy+h-1; i++)
 	{
-		window->GetUTFT().setColor((byte)r, 0, (byte)b);
+		window->GetUTFT().setColor((uint8_t)r, 0, (uint8_t)b);
 		window->GetUTFT().drawLine(wx+1, i, wx+w-1, i);
 		r -= RStep2;
 		b -= BStep2;
 	}
+	SetFlag(I_AM_PAINTED);
 }
 
 void UITempBar::SetTempSensors(TempSensor *s1, TempSensor *s2, TempSensor *s3)
@@ -1021,6 +1021,7 @@ void UITempBar::SetTempSensors(TempSensor *s1, TempSensor *s2, TempSensor *s3)
 		HandleTemperatureChange(s3, s3->getTemp());
 	}
 	calculate();
+	Invalidate();
 }
 
 void UITempBar::HandleTemperatureChange(void* Sender, float t)
@@ -1062,22 +1063,24 @@ void UITempBar::doOnClick(int x, int y)
 
 /*********************************************
 *********************************************/
-UICircPump::UICircPump(CWindow* window, bool reg):UIBase(window)
+UICircPump::UICircPump(CWindow* window, bool reg):UIBase(window), gr(window, false)
 {
 	if(reg) window->AddUIElement(this);
-	gr = new UIGraphics(window, false);
-	gr->SetSize(41, 41);
+	//gr = new UIGraphics(window, false);
+	gr.SetSize(41, 41);
 	w = 41; h = 41;
-	g_data = (byte*)g_circulation1;
-	gr->SetVectorBytes(g_data);
+	g_data = (uint8_t*)g_circulation1;
+	gr.SetVectorBytes(g_data);
 	cp = NULL;
 	manual = false;
+	cp_status = STATUS_OFF;
 }
 
 UICircPump::~UICircPump(void)
 {
-	delete gr;
-	if(cp){
+	//delete gr;
+	if(cp)
+	{
 		cp->RemoveStatusChangeHandler(this);
 	}
 }
@@ -1088,53 +1091,67 @@ void UICircPump::SetRotation(int val)
 	switch (val)
 	{
 	case 1:
-		g_data = (byte*)g_circulation1;
+		g_data = (uint8_t*)g_circulation1;
 		break;
 	case 2:
-		g_data = (byte*)g_circulation2;
+		g_data = (uint8_t*)g_circulation2;
 		break;
 	case 3:
-		g_data = (byte*)g_circulation3;
+		g_data = (uint8_t*)g_circulation3;
 		break;
 	case 4:
-		g_data = (byte*)g_circulation4;
+		g_data = (uint8_t*)g_circulation4;
 		break;
 	default:
 		break;
 	}
-	gr->SetVectorBytes(g_data);
+	gr.SetVectorBytes(g_data);
+	Invalidate();
 }
 
 void UICircPump::Draw()
 {
+	if (!window->IsActive())
+		return;
+
 	if (!cp)
 	{
-		gr->SetColor(COLOR_BLACK);
+		gr.SetColor(COLOR_BLACK);
 	}
 	else if(cp_status == STATUS_MANUAL)
 	{
-		gr->SetColor(CP_Manual_Color);
+		gr.SetColor(CP_Manual_Color);
 	}
 	else if (cp_status == STATUS_ON)
 	{
-		gr->SetColor(CP_ON_Color);
+		gr.SetColor(CP_ON_Color);
 	}
 	else if(cp_status == STATUS_OFF)
 	{
-		gr->SetColor(CP_OFF_Color);
+		gr.SetColor(CP_OFF_Color);
 	}
 	else if(cp_status == STATUS_DISABLED)
 	{
-		gr->SetColor(CP_OFF_Color);
+		gr.SetColor(CP_OFF_Color);
 	}
-	gr->Draw();
+	else
+	{
+		gr.SetColor(COLOR_BLACK);
+	}
+	gr.Draw();
+	SetFlag(I_AM_PAINTED);
 }
 
 void UICircPump::SetPosition(int x, int y)
 {
 	this->x = x;
 	this->y = y;
-	gr->SetPosition(x, y);
+	gr.SetPosition(x, y);
+}
+
+void UICircPump::SetStatus(Status status)
+{
+	HandleStatusChange(NULL, status);
 }
 
 void UICircPump::doOnClick(int x, int y)
@@ -1146,156 +1163,205 @@ void UICircPump::doOnClick(int x, int y)
 	}
 }
 
-void UICircPump::AttachPump(CirculationPump* pump){
+void UICircPump::AttachPump(CirculationPump* pump)
+{
+	if(cp)
+	{
+		cp->RemoveStatusChangeHandler(this);
+	}
 	cp = pump;
-	if(cp){
+	if(cp)
+	{
 		cp->AddStatusChangeHandler(this);
 		HandleStatusChange(cp, cp->getStatus());
+		Log.debug("UICircPump::AttachPump(CirculationPump* pump) OK");
+	}
+	else
+	{
+		Log.debug("UICircPump::AttachPump(CirculationPump* pump = NULL).");
 	}
 }
 
-void UICircPump::HandleStatusChange(void *Sender, Status status){
+void UICircPump::HandleStatusChange(void *Sender, Status status)
+{
 	cp_status = status;
 	Invalidate();
 }
 
 /*********************************************
 *********************************************/
-UILadomat::UILadomat(CWindow* window, bool reg) :UIBase(window)
+UILadomat::UILadomat(CWindow* window, bool reg) :UIBase(window), gr(window, false)
 {
 	if (reg) window->AddUIElement(this);
-	gr = new UIGraphics(window, false);
-	gr->SetSize(61, 85);
+	//gr = new UIGraphics(window, false);
+	gr.SetSize(61, 85);
 	w = 61; h = 85;
-	g_data = (byte*)bmp_ladomatas;
-	gr->SetGraphicsBytes(g_data);
-	manual = false;
-	WoodBoilers.Get(0)->AddStatusChangeHandler(this);
+	g_data = (uint8_t*)bmp_ladomatas;
+	gr.SetGraphicsBytes(g_data);
+	manual = false;	
 	cp_status = STATUS_LADOMAT_OFF;
-	if (WoodBoilers.Get(0)->IsLadomatManual())
-	{
-		cp_status = STATUS_LADOMAT_MANUAL;
-	}
-	else
-	{
-		if (WoodBoilers.Get(0)->IsLadomatasOn())
-		{
-			cp_status = STATUS_LADOMAT_ON;
-		}
-	}
+	wb = NULL;
 }
 
 UILadomat::~UILadomat(void)
 {
-	delete gr;
+	//delete gr;
 }
 
 void UILadomat::Draw()
 {
-	if (cp_status == STATUS_LADOMAT_MANUAL)
+	if (!window->IsActive())
+		return;
+
+	if (cp_status == STATUS_UNKNOWN)
 	{
-		gr->SetColor(CP_Manual_Color);
-		gr->Draw();
+		gr.SetColor(COLOR_BLACK);
+		gr.Draw();
+	}
+	else if (cp_status == STATUS_LADOMAT_MANUAL)
+	{
+		gr.SetColor(CP_Manual_Color);
+		gr.Draw();
 	}
 	else if (cp_status == STATUS_LADOMAT_ON)
 	{
-		gr->SetColor(CP_ON_Color);
-		gr->Draw();
+		gr.SetColor(CP_ON_Color);
+		gr.Draw();
 	}
 	else if (cp_status == STATUS_LADOMAT_OFF)
 	{
-		gr->SetColor(CP_OFF_Color);
-		gr->Draw();
+		gr.SetColor(CP_OFF_Color);
+		gr.Draw();
 	}
+	SetFlag(I_AM_PAINTED);
 }
 
 void UILadomat::SetPosition(int x, int y)
 {
 	this->x = x;
 	this->y = y;
-	gr->SetPosition(x, y);
+	gr.SetPosition(x, y);
+}
+
+void UILadomat::AttachWoodBoiler(CWoodBoiler * woodboilder)
+{
+	wb = woodboilder;
+	if (wb)
+	{
+		wb->AddStatusChangeHandler(this);
+		HandleStatusChange(wb, wb->GetLadomatStatus());
+	}
 }
 
 void UILadomat::doOnClick(int x, int y)
 {
-	WoodBoilers.Get(0)->ChangeLadomatManual();
+	if(wb)
+		wb->ChangeLadomatManual();
 }
 
 void UILadomat::HandleStatusChange(void *Sender, Status status)
 {
 	Log.debug("UILadomat::HandleStatusChange.");
-	cp_status = status;
-	Invalidate();
+	switch (status)
+	{
+	case STATUS_UNKNOWN:
+	case STATUS_LADOMAT_OFF:
+	case STATUS_LADOMAT_ON:
+	case STATUS_LADOMAT_MANUAL:
+		cp_status = status;
+		Invalidate();
+		break;
+	default:
+		break;
+	}
 }
 
 /*********************************************
 *********************************************/
-UIVentilator::UIVentilator(CWindow* window, bool reg) :UIBase(window)
+UIVentilator::UIVentilator(CWindow* window, bool reg) :UIBase(window), gr(window, false)
 {
 	if (reg) window->AddUIElement(this);
-	gr = new UIGraphics(window, false);
-	//gr->SetSize(51, 39);
-	gr->SetSize(41, 41);
+	//gr = new UIGraphics(window, false);
+	gr.SetSize(41, 41);
 	w = 41; h = 41;
-	g_data = (byte*)bmp_ventiliatorius;
-	gr->SetGraphicsBytes(g_data);
+	g_data = (uint8_t*)bmp_ventiliatorius;
+	gr.SetGraphicsBytes(g_data);
 	manual = false;
-	WoodBoilers.Get(0)->AddStatusChangeHandler(this);
 	cp_status = STATUS_EXHAUSTFAN_OFF;
-	if (WoodBoilers.Get(0)->IsExhaustFanManual())
-	{
-		cp_status = STATUS_EXHAUST_MANUAL;
-	}
-	else
-	{
-		if (WoodBoilers.Get(0)->IsExhaustFanManual())
-		{
-			cp_status = STATUS_EXHAUSTFAN_ON;
-		}
-	}
+	wb = NULL;
 }
 
 UIVentilator::~UIVentilator(void)
 {
-	delete gr;
+	//delete gr;
 }
 
 void UIVentilator::Draw()
 {
-	if (cp_status == STATUS_EXHAUST_MANUAL)
+	if (!window->IsActive())
+		return;
+
+	if (cp_status == STATUS_EXHAUSTFAN_MANUAL)
 	{
-		gr->SetColor(CP_Manual_Color);
-		gr->Draw();
+		gr.SetColor(COLOR_BLACK);
+		gr.Draw();
+	}
+	else if (cp_status == STATUS_EXHAUSTFAN_MANUAL)
+	{
+		gr.SetColor(CP_Manual_Color);
+		gr.Draw();
 	}
 	else if (cp_status == STATUS_EXHAUSTFAN_ON)
 	{
-		gr->SetColor(CP_ON_Color);
-		gr->Draw();
+		gr.SetColor(CP_ON_Color);
+		gr.Draw();
 	}
 	else if (cp_status == STATUS_EXHAUSTFAN_OFF)
 	{
-		gr->SetColor(CP_OFF_Color);
-		gr->Draw();
+		gr.SetColor(CP_OFF_Color);
+		gr.Draw();
 	}
+	SetFlag(I_AM_PAINTED);
 }
 
 void UIVentilator::SetPosition(int x, int y)
 {
 	this->x = x;
 	this->y = y;
-	gr->SetPosition(x, y);
+	gr.SetPosition(x, y);
+}
+
+void UIVentilator::AttachWoodBoiler(CWoodBoiler * woodboiler)
+{
+	wb = woodboiler;
+	if (wb)
+	{
+		wb->AddStatusChangeHandler(this);
+		HandleStatusChange(wb, wb->GetSmokeFanStatus());
+	}
 }
 
 void UIVentilator::doOnClick(int x, int y)
 {
-	WoodBoilers.Get(0)->ChangeExhaustFanManual();
+	if(wb)
+		wb->ChangeExhaustFanManual();
 }
 
 void UIVentilator::HandleStatusChange(void *Sender, Status status)
 {
 	Log.debug("UIVentilator::HandleStatusChange.");
-	cp_status = status;
-	Invalidate();
+	switch (status)
+	{
+	case STATUS_UNKNOWN:
+	case STATUS_EXHAUSTFAN_OFF:
+	case STATUS_EXHAUSTFAN_ON:
+	case STATUS_EXHAUSTFAN_MANUAL:
+		cp_status = status;
+		Invalidate();
+		break;
+	default:
+		break;
+	}
 }
 
 /*********************************************
@@ -1342,7 +1408,8 @@ UISwitchButton::~UISwitchButton()
 void UISwitchButton::SetOnBMPBytes(const unsigned short* data)
 {
 	bmpOndata = data;
-	if(state == STATUS_ON || state == STATUS_DISABLED_ON){
+	if(state == STATUS_ON || state == STATUS_DISABLED_ON)
+	{
 		SetBMPBytes(data);
 	}
 }
@@ -1350,7 +1417,8 @@ void UISwitchButton::SetOnBMPBytes(const unsigned short* data)
 void UISwitchButton::SetOffBMPBytes(const unsigned short* data)
 {
 	bmpOffdata = data;
-	if(state == STATUS_OFF || state == STATUS_DISABLED_OFF){
+	if(state == STATUS_OFF || state == STATUS_DISABLED_OFF)
+	{
 		SetBMPBytes(data);
 	}
 }

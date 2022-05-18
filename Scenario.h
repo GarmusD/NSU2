@@ -18,7 +18,7 @@
 #define GC_DRAW_ARC 11
 #define GC_FILL_ARC 12
 #define GC_LOAD_IMAGE 13//from internal sd card
-#define GC_DRAW_BITMAP 14//from byte array
+#define GC_DRAW_BITMAP 14//from uint8_t array
 #define GC_DRAW_GRAPHICS 15//from commands array
 
 #define GC_OBJECT_WIDTH 25
@@ -31,11 +31,11 @@ public:
 	Scenario(UTFT& utft);
 	~Scenario(void);
 	void LoadScenario(char* name);
-	void PlayScenario(int xbase, int ybase, byte* buf);
-	void PlayScenario(int xbase, int ybase, Rect region, byte* buf);
+	void PlayScenario(int xbase, int ybase, uint8_t* buf);
+	void PlayScenario(int xbase, int ybase, Rect region, uint8_t* buf);
 private:
 	UTFT& tft;
-	short getBufShort(byte *buf, int &idx);
+	short getBufShort(uint8_t *buf, int &idx);
 	bool InRect(int x, int y, Rect r);
 };
 

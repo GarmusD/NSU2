@@ -25,10 +25,10 @@ private:
 	float current_pwm;
 	uint32_t last_click;
 	uint32_t transition_start;
-	byte max_value, min_value;
-	byte last_value;
-	byte disp_model;
-	void SetBLValue(byte value);
+	uint8_t max_value, min_value;
+	uint8_t last_value;
+	uint8_t disp_model;
+	void SetBLValue(uint8_t value);
 };
 
 #endif

@@ -1,5 +1,13 @@
 #include "Timers.h"
 
+void TimerEvent::Reset()
+{
+	handler = NULL;
+	te_id = -1;
+	lastfire = 0;
+	resolution = 0;
+	onlyOnce = true;
+}
 
 void OneSecondInt()
 {
@@ -34,9 +42,16 @@ CTimers::CTimers(void)
 
 CTimers::~CTimers(void)
 {
+	
+}
+
+void CTimers::Reset()
+{
+	Timer1.detachInterrupt();	
 	timerHandlers.Clear();
 	oneSecHandlers.Clear();
 	minuteStartHandlers.Clear();
+	Events::Reset();
 }
 
 void CTimers::Begin()
@@ -56,7 +71,7 @@ void CTimers::Begin()
 	}
 	last_min = rtc.getMinutes();
 	started = true;
-	Timer.getAvailable().attachInterrupt(OneSecondInt).setFrequency(1).start();
+	Timer1.attachInterrupt(OneSecondInt).setFrequency(1).start();
 	TimeSlice.RegisterTimeSlice(this);
 }
 

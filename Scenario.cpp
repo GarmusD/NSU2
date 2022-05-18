@@ -9,9 +9,9 @@ Scenario::~Scenario(void)
 {
 }
 
-short Scenario::getBufShort(byte* buf, int& idx)
+short Scenario::getBufShort(uint8_t* buf, int& idx)
 {
-	byte cl, ch;
+	uint8_t cl, ch;
 	short s;
 	ch = buf[idx];
 	idx++;
@@ -21,19 +21,19 @@ short Scenario::getBufShort(byte* buf, int& idx)
 	return s;
 }
 
-void Scenario::PlayScenario(int xbase, int ybase, byte* buf)
+void Scenario::PlayScenario(int xbase, int ybase, uint8_t* buf)
 {
 
 	if(!buf || !sizeof(buf)) return;
 
 	int idx = 0;
-	byte cmd;
+	uint8_t cmd;
 	
 	short s1, s2, s3, s4;
-	byte b1, b2, b3;
+	uint8_t b1, b2, b3;
 	while((cmd = buf[idx])>0)
 	{
-		idx++;//increase to next byte after cmd
+		idx++;//increase to next uint8_t after cmd
 		switch (cmd)
 		{
 		case GC_SET_COLOR:
@@ -106,7 +106,7 @@ void Scenario::PlayScenario(int xbase, int ybase, byte* buf)
 			break;
 		case GC_LOAD_IMAGE://from internal sd card
 			break;
-		case GC_DRAW_BITMAP://from byte array
+		case GC_DRAW_BITMAP://from uint8_t array
 			break;
 		case GC_DRAW_GRAPHICS://from commands array
 			break;
@@ -116,18 +116,18 @@ void Scenario::PlayScenario(int xbase, int ybase, byte* buf)
 	}
 }
 
-void Scenario::PlayScenario(int xbase, int ybase, Rect region, byte* buf)
+void Scenario::PlayScenario(int xbase, int ybase, Rect region, uint8_t* buf)
 {
 	if(!buf || !sizeof(buf)) return;
 
 	int idx = 0;
-	byte cmd;
+	uint8_t cmd;
 	
 	short s1, s2, s3, s4;
-	byte b1, b2, b3;
+	uint8_t b1, b2, b3;
 	while((cmd = buf[idx])>0)
 	{
-		idx++;//increase to next byte after cmd
+		idx++;//increase to next uint8_t after cmd
 		switch (cmd)
 		{
 		case GC_SET_COLOR:
@@ -200,7 +200,7 @@ void Scenario::PlayScenario(int xbase, int ybase, Rect region, byte* buf)
 			break;
 		case GC_LOAD_IMAGE://from internal sd card
 			break;
-		case GC_DRAW_BITMAP://from byte array
+		case GC_DRAW_BITMAP://from uint8_t array
 			break;
 		case GC_DRAW_GRAPHICS://from commands array
 			break;
