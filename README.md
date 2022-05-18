@@ -23,5 +23,5 @@ Limited set of controls can be made directly on controller touch screen, built i
 
 ## Screenshots
 
-![Development](https://github.com/GarmusD/NSU2/blob/a61600c88ce04e2d1ecd9e004c5e99d06c7a5bfe/images/development.jpg)
+![Controller development](https://www.dropbox.com/s/qcc0nbolcvhkl4e/development.jpg?raw=1)
 
