@@ -24,4 +24,4 @@ Limited set of controls can be made directly on controller touch screen, built i
 ## Screenshots
 
 ![Controller development](https://www.dropbox.com/s/qcc0nbolcvhkl4e/development.jpg?raw=1)
-
+![Upgraded wood boiler](https://www.dropbox.com/s/lbcfs8fxio23aw5/wood_boiler.jpg?raw=1)
