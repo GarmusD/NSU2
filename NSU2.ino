@@ -1,6 +1,5 @@
 //bossac.exe -i -d --port=COM7 -U false -e -w -v -b NSU2.bin -R
 //bossac.exe -i -d --port=COM4 -U false -e -w -b NSU2.BIN -R <- NO -v parameter = NO VERIFY
-// Raspberry Pi MAC address: B8:27:EB:34:C8:DE
 //System TSensor 28:77:6A:94:4:0:0:DE
 
 #define USE_UI 1
@@ -67,7 +66,6 @@ BButton button = BButton(BUTTON_PIN);
 
 void OnButtonRelease(BButton& btn) 
 {
-	Log.debug("Fizinis Ikurimo mygtukas paspaustas.");
 #if USE_UI
 	Windows.ForceLCDBacklight();
 #endif
@@ -80,10 +78,7 @@ void SetInfoText(const char* tekstas)
 	char s[256];
 	sprintf(s, "SetInfoText(%s)", tekstas);
 	Log.debug(s);
-	//if (splash)
-	//{
 	Windows.GetSplashScreen().SetInfoText(tekstas);
-	//}
 #endif
 }
 
@@ -93,10 +88,7 @@ void UpdateInfoText(const char* tekstas)
 	char s[256];
 	sprintf(s, "UpdateInfoText(%s)", tekstas);
 	Log.debug(s);
-	//if (splash)
-	//{
 	Windows.GetSplashScreen().UpdateInfoText(tekstas);
-	//}
 #endif
 }
 
@@ -114,58 +106,35 @@ void StartSerialCommunications()
 void Reset()
 {
 	Log.debug("Reset() called...");
-	Log.debug("Timers.Reset();");
 	Timers.Reset();
-	Log.debug("TimeSlice.Reset();");
 	TimeSlice.Reset();
-	Log.debug("SystemStatus.Reset();");
 	SystemStatus.Reset();
-	Log.debug("BootChecker.Reset();");
 	BootChecker.Reset();
-	Log.debug("cmdServer.Reset();");
 	cmdServer.Reset();
 #if USE_UI
-	Log.debug("Windows.Reset();");
 	Windows.Reset();
 #endif
-	Log.debug("button.clickHandler(NULL);");
 	button.clickHandler(NULL);
-	Log.debug("Switches.Reset();");
 	Switches.Reset();
-	Log.debug("TSensors.Reset();");
 	TSensors.Reset();
-	Log.debug("RelayModules.Reset();");
 	RelayModules.Reset();
-	Log.debug("TempTriggers.Reset();");
 	TempTriggers.Reset();
-	Log.debug("CirculationPumps.Reset();");
 	CirculationPumps.Reset();
-	Log.debug("Collectors.Reset();");
 	Collectors.Reset();
-	Log.debug("ComfortZones.Reset();");
 	ComfortZones.Reset();
-	Log.debug("KTypes.Reset();");
 	KTypes.Reset();
-	Log.debug("WaterBoilers.Reset();");
 	WaterBoilers.Reset();
-	Log.debug("WoodBoilers.Reset();");
 	WoodBoilers.Reset();
-	Log.debug("Alarm.Reset();");
 	Alarms.Reset();
-	Log.debug("SysFans.Reset();");
 	SysFans.Reset();
 }
 
 void PreBegin()
 {
-
 	Log.debug("PreBegin() called...");
-
 #if USE_UI
-	Log.debug("Initializing Windows.Begin();");
 	Windows.Begin();
 	Windows.BeginSplashWindow();
-	Log.debug("Drawing splash window...");
 	Windows.DrawSplashScreen();
 	SetInfoText("Paleidziama...");
 #endif
@@ -173,7 +142,6 @@ void PreBegin()
 	//Start command server for messages
 	cmdServer.begin();
 
-	Log.debug("Setting up FileManager.");
 	FileManager.Begin();
 	if (FileManager.SDCardOk())
 	{
@@ -225,7 +193,6 @@ void ReadSettings()
 	char s[256];
 	Log.debug("ReadSettings called...");	
 
-	Log.debug("Collecting TSensors->...");
 	SetInfoText("Ieskomi temperaturu sensoriai...");
 	sprintf(s, "Rasta temperaturos davikliu: %d", TSensors.getSensorCount());
 	SetInfoText(s);
