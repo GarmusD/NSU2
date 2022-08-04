@@ -46,7 +46,7 @@ uint8_t CirculationPump::GetConfigPos()
 	return configPos;
 }
 
-void CirculationPump::ApplyConfig(uint8_t cfgPos, const CircPumpData & data)
+void CirculationPump::ApplyConfig(uint8_t cfgPos, const CircPumpData& data)
 {
 	configPos = cfgPos;
 	SetName(data.Name);
@@ -64,7 +64,7 @@ void CirculationPump::ChangeStatus(Status new_status)
 	PrintStatus();
 }
 
-void CirculationPump::PrintStatus(const char * action)
+void CirculationPump::PrintStatus(const char* action)
 {
 	DynamicJsonDocument jBuff(512);
 	JsonObject root = jBuff.to<JsonObject>();
@@ -100,7 +100,7 @@ bool CirculationPump::IsRunning()
 	return running;
 }
 
-bool CirculationPump::IsEnabled(){
+bool CirculationPump::IsEnabled() {
 	return enabled;
 }
 
@@ -124,10 +124,10 @@ void CirculationPump::ValveOpened()
 void CirculationPump::ValveClosed()
 {
 	counter--;
-	char s[128];
+	char s[256];
 	sprintf(s, "CirculationPump (%s)::ValveClosed() - valves left: %d", name, counter);
 	Log.debug(s);
-	if(counter < 0) counter = 0;
+	if (counter < 0) counter = 0;
 	switch_speed();
 	if (counter == 0 && !manual && running)
 	{
@@ -141,13 +141,13 @@ void CirculationPump::ValveClosed()
 
 void CirculationPump::StartPump()
 {
-	if(channel != 0xFF && enabled && !running)
+	if (channel != 0xFF && enabled && !running)
 	{
 		running = true;
-		char s[128];
+		char s[256];
 		sprintf(s, "CirculationPump (%s)::StartPump() - Ch: %d. Opened valves: %d", name, channel, counter);
-		Log.debug(s);		
-		if(!manual)
+		Log.debug(s);
+		if (!manual)
 		{
 			ChangeStatus(STATUS_ON);
 			DispatchStatusChange(this, status);
@@ -158,15 +158,15 @@ void CirculationPump::StartPump()
 
 void CirculationPump::StopPump()
 {
-	if(channel !=0xFF && running)
-	{		
-		if(!manual)
+	if (channel != 0xFF && running)
+	{
+		if (!manual)
 		{
-			char s[128];
+			char s[256];
 			sprintf(s, "CirculationPump (%s)::StopPump() - Ch: %d. Opened valves: %d", name, channel, counter);
 			Log.debug(s);
-			running = false;			
-			if(status != STATUS_DISABLED){
+			running = false;
+			if (status != STATUS_DISABLED) {
 				ChangeStatus(STATUS_OFF);
 				DispatchStatusChange(this, status);
 			}
@@ -174,7 +174,7 @@ void CirculationPump::StopPump()
 		}
 		else
 		{
-			char s[128];
+			char s[256];
 			sprintf(s, "CirculationPump ($s)::StopPump() - Ch: %d - MANUAL MODE, NOT STOPPING. Opened valves: %d", name, channel, counter);
 			Log.debug(s);
 		}
@@ -185,9 +185,9 @@ void CirculationPump::DisablePump()
 {
 	if (channel != 0xFF && running)
 	{
+		char s[256];
 		if (!manual)
 		{
-			char s[128];
 			sprintf(s, "CirculationPump (%s)::DisablePump() - Ch: %d. Opened valves: %d", name, channel, counter);
 			Log.debug(s);
 			running = false;
@@ -197,9 +197,8 @@ void CirculationPump::DisablePump()
 			}
 			RelayModules.CloseChannel(channel);
 		}
-		else 
+		else
 		{
-			char s[128];
 			sprintf(s, "CirculationPump (%s)::DisablePump() - Ch: %d - MANUAL MODE, NOT STOPPING. Opened valves: %d", name, channel, counter);
 			Log.debug(s);
 		}
@@ -209,12 +208,12 @@ void CirculationPump::DisablePump()
 void CirculationPump::SwitchManualMode()
 {
 	manual = !manual;
-	char s[128];
+	char s[256];
 	sprintf(s, "CirculationPump %s ManualMode %s", name, manual ? "true" : "false");
 	Log.debug(s);
-	if(manual)
+	if (manual)
 	{
-		if(channel != 0xFF)
+		if (channel != 0xFF)
 		{
 			running = true;
 			Timers.AddTimerHandler(this, 0xDD, MINUTES15, true);
@@ -225,21 +224,22 @@ void CirculationPump::SwitchManualMode()
 	}
 	else
 	{
-		if(channel != 0xFF)
+		if (channel != 0xFF)
 		{
-			if(counter == 0) 
+			if (counter == 0)
 			{
 				running = true;
 				StopPump();
 			}
-			else if(enabled)
+			else if (enabled)
 			{
 				running = false;
 				StartPump();
-			}else
+			}
+			else
 			{
 				running = true;
-				DisablePump();				
+				DisablePump();
 			}
 		}
 	}
@@ -258,8 +258,8 @@ const char* CirculationPump::GetName()
 void CirculationPump::SetSpeed(uint8_t maxspeed, uint8_t speed1_channel, uint8_t speed2_channel, uint8_t speed3_channel)
 {
 	max_speed = maxspeed;
-	if(max_speed < 1) max_speed = 1;
-	if(max_speed > 3) max_speed = 3;
+	if (max_speed < 1) max_speed = 1;
+	if (max_speed > 3) max_speed = 3;
 	speed_channels[0] = speed1_channel;
 	speed_channels[1] = speed2_channel;
 	speed_channels[2] = speed3_channel;
@@ -282,16 +282,18 @@ void CirculationPump::RegisterValveCount(uint8_t valvecount)
 
 void CirculationPump::calc_speed_table()
 {
-	if(total_valves <= 0) return;
-	if(max_speed == 1){
+	if (total_valves <= 0) return;
+	if (max_speed == 1) {
 		speed_table[0] = total_valves;
-	}else if(max_speed == 2){
+	}
+	else if (max_speed == 2) {
 		uint8_t valves_per_speed = total_valves / 2;
 		speed_table[0] = valves_per_speed;
 		speed_table[1] = total_valves;
 		speed_table[2] = 0xFF;
-	}else if (max_speed == 3){
-		 uint8_t valves_per_speed = total_valves / 3;
+	}
+	else if (max_speed == 3) {
+		uint8_t valves_per_speed = total_valves / 3;
 		speed_table[0] = valves_per_speed;
 		speed_table[1] = valves_per_speed * 2;
 		speed_table[2] = total_valves;
@@ -301,14 +303,15 @@ void CirculationPump::calc_speed_table()
 void CirculationPump::switch_speed()
 {
 	uint8_t spd = getReqSpeed();
-	if(spd != current_speed){
+	if (spd != current_speed)
+	{
 		current_speed = spd;
-		if(speed_channels[0] != 0xFF) RelayModules.CloseChannel(speed_channels[0]);
-		if(speed_channels[1] != 0xFF) RelayModules.CloseChannel(speed_channels[1]);
-		if(speed_channels[2] != 0xFF) RelayModules.CloseChannel(speed_channels[2]);
-		if(speed_channels[speed_channels[spd-1]] != 0xFF) {
+		if (speed_channels[0] != 0xFF) RelayModules.CloseChannel(speed_channels[0]);
+		if (speed_channels[1] != 0xFF) RelayModules.CloseChannel(speed_channels[1]);
+		if (speed_channels[2] != 0xFF) RelayModules.CloseChannel(speed_channels[2]);
+		if (speed_channels[speed_channels[spd - 1]] != 0xFF) {
 			channel = speed_channels[spd - 1];
-			if(channel != 0xFF && running)
+			if (channel != 0xFF && running)
 				RelayModules.OpenChannel(channel);
 		}
 	}
@@ -317,26 +320,28 @@ void CirculationPump::switch_speed()
 uint8_t CirculationPump::getReqSpeed()
 {
 	uint8_t spd = max_speed;
-	if(counter <= speed_channels[0]){
+	if (counter <= speed_channels[0]) {
 		spd = 1;
-	}else if(counter <= speed_channels[1]){
+	}
+	else if (counter <= speed_channels[1]) {
 		spd = 2;
-	}else if(counter <= speed_channels[2]){
+	}
+	else if (counter <= speed_channels[2]) {
 		spd = 3;
 	}
-	if(spd > max_speed)
+	if (spd > max_speed)
 		spd = max_speed;
 	return spd;
 }
 
 void CirculationPump::SetTempTrigger(TempTrigger* value)
 {
-	if(trigger != NULL)
+	if (trigger != NULL)
 	{
 		trigger->RemoveStatusChangeHandler(this);
 		trigger = NULL;
 	}
-	if(value != NULL)
+	if (value != NULL)
 	{
 		trigger = value;
 		trigger->AddStatusChangeHandler(this);
@@ -346,31 +351,31 @@ void CirculationPump::SetTempTrigger(TempTrigger* value)
 
 void CirculationPump::HandleStatusChange(void* Sender, Status value)
 {
-	if(Sender == trigger)
+	if (Sender == trigger)
 	{
 		//bool new_state = 
 		enabled = value == STATUS_ON;// CheckTempTriggers();
 		char s[128];
 		sprintf(s, "CirculationPump %s in HandleStatusChange Trigger value: %s", name, Events::GetStatusName(value));
 		Log.debug(s);
-		sprintf(s, "CirculationPump %s StatusChange ", name, enabled ? "true":"false");
+		sprintf(s, "CirculationPump %s StatusChange ", name, enabled ? "true" : "false");
 		Log.debug(s);
-		if(status == STATUS_MANUAL) return;
-		if(!enabled)
+		if (status == STATUS_MANUAL) return;
+		if (!enabled)
 		{
 			sprintf(s, "CirculationPump %s is disabled.", name);
 			Log.debug(s);
-			if(status != STATUS_DISABLED){
+			if (status != STATUS_DISABLED) {
 				ChangeStatus(STATUS_DISABLED);
-				DisablePump();				
+				DisablePump();
 				DispatchStatusChange(this, status);
 			}
 		}
 		else //enabled
 		{
-			if(status == STATUS_DISABLED)
+			if (status == STATUS_DISABLED)
 			{
-				if(counter) 
+				if (counter)
 				{
 					sprintf(s, "CirculationPump %s. Starting circpump", name);
 					Log.debug(s);
@@ -382,9 +387,9 @@ void CirculationPump::HandleStatusChange(void* Sender, Status value)
 					DispatchStatusChange(this, status);
 				}
 			}
-			else if(status == STATUS_OFF)
+			else if (status == STATUS_OFF)
 			{
-				if(counter) 
+				if (counter)
 				{
 					sprintf(s, "CirculationPump %s. Starting circpump", name);
 					Log.debug(s);
@@ -402,16 +407,16 @@ void CirculationPump::HandleStatusChange(void* Sender, Status value)
 
 void CirculationPump::HandleTimerEvent(int te_id)
 {
-	if(te_id == 0xDD)
+	if (te_id == 0xDD)
 	{
-		if(manual)
+		if (manual)
 		{
 			SwitchManualMode();
 		}
 	}
 }
 
-Status CirculationPump::getStatus(){
+Status CirculationPump::getStatus() {
 	return status;
 }
 
@@ -422,15 +427,15 @@ Status CirculationPump::getStatus(){
 CirculationPump* CCirculationPumps::GetByName(const char* name)
 {
 	CirculationPump* pump;
-	for(int i=0; i<Count(); i++)
+	for (int i = 0; i < Count(); i++)
 	{
 		pump = Get(i);
-		if(strcmp(name, pump->GetName()) == 0) return pump;
+		if (strcmp(name, pump->GetName()) == 0) return pump;
 	}
 	return NULL;
 }
 
-CirculationPump * CCirculationPumps::GetByConfigPos(uint8_t cfgPos)
+CirculationPump* CCirculationPumps::GetByConfigPos(uint8_t cfgPos)
 {
 	CirculationPump* pump;
 	for (int i = 0; i < Count(); i++)
@@ -522,7 +527,7 @@ void CCirculationPumps::LoadConfig(void)
 	}
 }
 
-bool CCirculationPumps::GetConfigData(uint8_t cfgPos, CircPumpData & data)
+bool CCirculationPumps::GetConfigData(uint8_t cfgPos, CircPumpData& data)
 {
 	if (FileManager.OpenConfigFile(CFG_FILE, VINFO) == FileStatus_OK)
 	{
@@ -540,7 +545,7 @@ bool CCirculationPumps::GetConfigData(uint8_t cfgPos, CircPumpData & data)
 	return false;
 }
 
-bool CCirculationPumps::ValidateSetupDataSet(JsonObject & jo)
+bool CCirculationPumps::ValidateSetupDataSet(JsonObject& jo)
 {
 	if (jo.containsKey(jKeyConfigPos) &&
 		jo.containsKey(jKeyEnabled) &&
@@ -565,7 +570,7 @@ void CCirculationPumps::ParseJson(JsonObject& jo)
 {
 	if (jo.containsKey(jKeyAction))
 	{
-		const char * action = jo[jKeyAction];
+		const char* action = jo[jKeyAction];
 		if (strcmp(action, jCircPumpActionClick) == 0)
 		{
 			if (jo.containsKey(jKeyName))
