@@ -1,14 +1,14 @@
 
 # NSU
 
-Initially NSU was created as controller for a house heating system. Hardware was chosen to be UDOO Dual and runs on Arduino side of the board - SAM3X8E ARM Cortex-M3 CPU (same as Arduino Due). 
-Now it controls water boiler and ventilation.
+Initially NSU was created as controller for a house heating system. As hardware "UDOO Dual" was chosen. Firmware runs on Arduino side of the board - SAM3X8E ARM Cortex-M3 CPU (same as Arduino Due). 
+It also now controls the water boiler and the ventilation of the house.
 
 ## Features
 ### Wood boiler
-Controls burning process and keeps required temperature of the water inside boiler. To achieve this exhaust fan and ladomat control is used.
+Controls the combustion process and maintains the set temperature inside the boiler. This is done by controlling the exhaust fan and the ladomate.
 ### Water boiler
-Heats up water boiler.
+Heats the water boiler.
 ### Rooms temperature
 Controls floor heating of each room individually.
 ### Winter/Summer mode
